@@ -25,6 +25,7 @@ def parse_full_lorawan_frame(Packet_Data: bytes):
     # --- Application Layer ---
     #if not mac_payload:
     #    raise ValueError("MAC payload is empty or invalid")
+    print("MACPayload hex:", mac_payload.hex().upper())
     app_result = parse_app_layer(mac_payload)
 
     # --- Extract & flatten fields ---

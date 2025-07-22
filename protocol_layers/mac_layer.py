@@ -1,5 +1,4 @@
 from construct import Struct, BitStruct, BitsInteger, Bytes, GreedyBytes
-from features.security import Physical_Layer_CRC_Checker
 
 LoRaWANMacFrame = Struct(
         "MHDR" / BitStruct(
@@ -14,15 +13,18 @@ def parse_mac_layer(phy_payload: bytes):
 
     # Parse MAC
     parsed_mac = LoRaWANMacFrame.parse(phy_payload)
+    mhdr = parsed_mac.MHDR
     payload_and_mic = parsed_mac.MACPayloadAndMIC
     mac_payload = payload_and_mic[:-4] if len(payload_and_mic) >= 4 else payload_and_mic
-    mic = payload_and_mic[-4:] if len(payload_and_mic) >= 4 else b""
+    mic = payload_and_mic[-4:]
+    print("MACPayloadAndMIC:", payload_and_mic.hex().upper())
+    print("MACPayload len:", len(payload_and_mic))
 
     return {
         "MHDR": {
-            "MType": parsed_mac.MHDR.MType,
-            "RFU": parsed_mac.MHDR.RFU,
-            "Major": parsed_mac.MHDR.Major
+            "MType": mhdr.MType,
+            "RFU": mhdr.RFU,
+            "Major": mhdr.Major
         },
         "MACPayload": mac_payload,
         "MIC": mic
