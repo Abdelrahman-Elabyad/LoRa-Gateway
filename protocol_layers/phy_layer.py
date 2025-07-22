@@ -1,23 +1,27 @@
 # Construct is used as its much and compatibale with the raspberry pi better than any library on python
 # file: phy/full_phy_parser.py
-from construct import Struct, Byte, Bytes, Int16ul, GreedyBytes,GreedyRange
+from construct import Struct, Byte, Bytes, GreedyBytes
 
 LoRaPhysicalFrame = Struct(
     "Preamble" / Bytes(8),             # Usually fixed to 0x55 * 8 or similar
     "PHDR" / Byte,                     # Physical Header
     "PHDR_CRC" / Byte,                 # Header CRC
-    "PHYPayload" / GreedyRange(Byte)[:-2],  # All remaining bytes except last 2   # Stores all the bytes between the PHDR_CRC and the the last 2 bytes of the Payload_CRC
-    "PayloadCRC" / Int16ul             # CRC of payload (Stored using Little Endian convention the LSB are on the left)
+    "PHYPayloadAndCRC" / GreedyBytes   # All remaining bytes (payload + CRC)
 )
 
-#Function that uses the Packet and passes it on the pysical layer parser to return the physical payload
 def parse_phy_layer(lora_data: bytes):
     parsed = LoRaPhysicalFrame.parse(lora_data)
-    # Return raw LoRaWAN PHYPayload for next layer (MAC Layer)
+    payload_and_crc = parsed.PHYPayloadAndCRC
+    if len(payload_and_crc) >= 2:
+        phy_payload = payload_and_crc[:-2]
+        payload_crc = int.from_bytes(payload_and_crc[-2:], "little")
+    else:
+        phy_payload = payload_and_crc
+        payload_crc = None
     return {
-        "preamble": parsed.Preamble,
+        "Preamble": parsed.Preamble,
         "PHDR": parsed.PHDR,
         "PHDR_CRC": parsed.PHDR_CRC,
-        "PHYPayload": parsed.PHYPayload,
-        "PayloadCRC": parsed.PayloadCRC
+        "PHYPayload": phy_payload,
+        "PayloadCRC": payload_crc
     }

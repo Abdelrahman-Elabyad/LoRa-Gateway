@@ -20,5 +20,22 @@ LoRaWANAPPFrame = Struct(
     "FPort" / Byte,                     # Application port (1–223), 0 reserved for MAC-only
     "FRMPayload" / GreedyBytes         # Application payload (encrypted or MAC commands)
 )
-def parse_app_layer (MACPayload):
-    
+# Used a dictionary to make it more readable
+def parse_app_layer(MACPayload):
+    parsed = LoRaWANAPPFrame.parse(MACPayload)
+    return {
+        "FHDR": {
+            "DevAddr": parsed.FHDR.DevAddr,
+            "FCtrl": {
+                "ADR": parsed.FHDR.FCtrl.ADR,
+                "ADRACKReq": parsed.FHDR.FCtrl.ADRACKReq,
+                "ACK": parsed.FHDR.FCtrl.ACK,
+                "ClassB": parsed.FHDR.FCtrl.ClassB,
+                "FOptsLen": parsed.FHDR.FCtrl.FOptsLen
+            },
+            "FCnt": parsed.FHDR.FCnt,
+            "FOpts": parsed.FHDR.FOpts
+        },
+        "FPort": parsed.FPort,
+        "FRMPayload": parsed.FRMPayload
+    }    
