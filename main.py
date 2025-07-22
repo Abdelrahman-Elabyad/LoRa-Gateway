@@ -2,7 +2,7 @@ from Parsing.frame_parser import parse_full_lorawan_frame
 
 def main():
     # Example raw packet (hex string converted to bytes)
-    sample_packet_hex = "AAAAAAAAAAAAAAAA4001400102030400010203FF1122334455"
+    sample_packet_hex = "AAAAAAAAAAAAAAAA40404001020304040100AABBCCDD03DEADBEEF000000004620"
 
     packet_bytes = bytes.fromhex(sample_packet_hex)
     print("Packet length:", len(packet_bytes))
