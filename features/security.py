@@ -57,7 +57,14 @@ def compute_verify_mic(nwkskey: bytes, devaddr: bytes, fcnt: int, direction: int
     ])
 
     cmac.update(B0 + MHDR + MacPayload)
-    return cmac.finalize()[:4] == MIC # Return first 4 bytes as MIC
+    calculated_cmac = cmac.finalize()  
+
+    MIC_HEX = MIC.hex().upper() if isinstance(MIC, bytes) else MIC
+    print("MIC from packet:", MIC_HEX)
+    calculated_mic = calculated_cmac[:4].hex().upper()
+    print("Calculated MIC:", calculated_mic)
+    return calculated_mic == MIC_HEX
+
 
 
 #Helper Function for the FCnt conversion 
