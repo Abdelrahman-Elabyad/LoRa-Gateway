@@ -1,14 +1,10 @@
 from Parsing.frame_parser import parse_full_lorawan_frame
-
+from config.settings import SAMPLE_PACKET_BYTES, NWK_SKEY, APP_SKEY
 def main():
-    # Example raw packet (hex string converted to bytes)
-    sample_packet_hex = "AAAAAAAAAAAAAAAA40404001020304040100AABBCCDD03DEADBEEF000000004620"
+    print("Packet length:", len(SAMPLE_PACKET_BYTES))
+    print("Packet hex:", SAMPLE_PACKET_BYTES.hex().upper())
 
-    packet_bytes = bytes.fromhex(sample_packet_hex)
-    print("Packet length:", len(packet_bytes))
-    print("Packet hex:", packet_bytes.hex().upper())
-
-    parsed = parse_full_lorawan_frame(packet_bytes)
+    parsed = parse_full_lorawan_frame(SAMPLE_PACKET_BYTES)
     # Print parsed results
     for key, value in parsed.items():
             print(f"{key}: {value}")

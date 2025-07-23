@@ -9,8 +9,8 @@ LoRaPhysicalFrame = Struct(
     "PHYPayloadAndCRC" / GreedyBytes   # All remaining bytes (payload + CRC)
 )
 
-def parse_phy_layer(lora_data: bytes):
-    parsed = LoRaPhysicalFrame.parse(lora_data)
+def parse_phy_layer(LoRaPacket: bytes):
+    parsed = LoRaPhysicalFrame.parse(LoRaPacket)
     payload_and_crc = parsed.PHYPayloadAndCRC
     if len(payload_and_crc) >= 2:
         phy_payload = payload_and_crc[:-2]

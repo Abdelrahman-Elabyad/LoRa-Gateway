@@ -1,4 +1,4 @@
-from construct import Struct, BitStruct, BitsInteger, Bytes, Int16ul, Byte, GreedyBytes, this
+from construct import Struct, BitStruct, BitsInteger, Bytes, Int16ul, Byte, GreedyBytes, this, Int32ul
 
 # FCtrl (Frame Control) contains MAC-level flags and FOpts length
 FCtrl = BitStruct(
@@ -12,8 +12,9 @@ FCtrl = BitStruct(
 # Full LoRaWAN Application Frame (inside the MACPayload)
 LoRaWANAPPFrame = Struct(
     "FHDR" / Struct(  # Frame Header
-        "DevAddr" / Bytes(4),           # Device address (little endian)
+        "DevAddr" / Int32ul,  # Device address (little endian)
         "FCtrl" / FCtrl,                # Frame control flags and FOpts length
+        #Unsigned little endian integer for FCnt
         "FCnt" / Int16ul,               # Frame counter (2 bytes, uplink/downlink tracking)
         "FOpts" / Bytes(this.FCtrl.FOptsLen)  # Optional MAC commands (0–15 bytes)
     ),
