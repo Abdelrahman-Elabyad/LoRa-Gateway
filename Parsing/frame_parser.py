@@ -18,11 +18,11 @@ def parse_full_lorawan_frame(Packet_Data: bytes):
 
 
     # --- MAC Layer ---
-    #if not Physical_Layer_CRC_Checker(phdr, phdr_crc, phy_payload, payload_crc):
-    #    raise ValueError("Invalid CRC in physical layer data")
-    #else:
-    mac_result = parse_mac_layer(phy_payload)
-    mac_payload = mac_result["MACPayload"]
+    if not Physical_Layer_CRC_Checker(phdr, phdr_crc, phy_payload, payload_crc):
+        raise ValueError("Invalid CRC in physical layer data")
+    else:
+        mac_result = parse_mac_layer(phy_payload)
+        mac_payload = mac_result["MACPayload"]
 
     # --- Application Layer ---
     
