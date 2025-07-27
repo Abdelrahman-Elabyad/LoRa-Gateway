@@ -1,6 +1,8 @@
 import binascii
 from functools import reduce
 from operator import xor
+import numpy as np
+from Crypto.Cipher import AES
 from cryptography.hazmat.primitives.cmac import CMAC
 from cryptography.hazmat.primitives.ciphers import algorithms
 
@@ -80,3 +82,75 @@ def fcnt_to_little_endian_bytes(fcnt: int, Bytes: int) -> bytes:
     else:
         raise ValueError("FCnt must be 16 or 32 bits")
 
+#NO CBC *Cipher Block CHnainig is done 
+#We formulate the J block in teh CTR encryption mode as per LoRaWAN specification (section 4.3.3)
+#First we encrypt the A block (which is the J block) using ECB mode (each block on its own )
+#Then the result is XORed with the FRMPayload (Padded if needed) to get the decrypted payload
+#Decrypted[i] = FRMPayload[i] XOR S_block[i]
+
+def decrypt_frm_payload(app_skey: bytes,nwkskey:bytes, dev_addr: bytes, fcnt: int, direction: int, frm_payload: bytes, Fport: int) -> bytes:
+    """
+    Decrypts the FRMPayload using AES-CTR mode as per LoRaWAN specification (section 4.3.3),
+    with vectorized XOR via NumPy for better performance.
+
+    Args:
+        app_skey (bytes): 16-byte session key (AppSKey or NwkSKey).
+        dev_addr (bytes): 4-byte device address (little endian).
+        fcnt (int): 2-byte frame counter.
+        direction (int): 0 = uplink, 1 = downlink.
+        frm_payload (bytes): Encrypted payload.
+
+    Returns:
+        bytes: Decrypted payload.
+    """
+    if (len(app_skey) and len(nwkskey))!= 16:
+        raise ValueError("Both AppSKey and NwkSKey must be 16 bytes")
+     # Select the correct key based on FPort
+    if Fport == 0:
+        key = nwkskey
+    else:
+        key = app_skey
+
+    aes_cipher = AES.new(key, AES.MODE_ECB)
+    payload_len = len(frm_payload)
+    num_blocks = (payload_len + 15) // 16
+
+    decrypted = bytearray()
+
+    for i in range(num_blocks):
+        # --- Construct A block (encryption block for AES CTR) ---
+        a_block = bytearray(16)
+        a_block[0] = 0x01
+        a_block[5] = direction & 0x01
+        a_block[6:10] = dev_addr
+        a_block[10:12] = fcnt.to_bytes(2, 'little')
+        a_block[15] = (i + 1) & 0xFF  # Counter starts at 1
+
+        # --- Encrypt A block to get S block ---
+        s_block = aes_cipher.encrypt(bytes(a_block))
+
+        # --- Slice current 16-byte chunk from payload ---
+        start = i * 16
+        end = min(start + 16, payload_len)
+        frm_chunk = frm_payload[start:end]
+
+        # --- XOR using NumPy (vectorized) ---
+        frm_arr = np.frombuffer(frm_chunk, dtype=np.uint8)
+        s_arr = np.frombuffer(s_block, dtype=np.uint8)[:len(frm_chunk)]
+
+        decrypted_chunk = np.bitwise_xor(frm_arr, s_arr).tobytes()
+        decrypted.extend(decrypted_chunk)
+
+    return bytes(decrypted)
+
+# This function is used to encrypt FRMPayload messages
+def encrypt_frm_payload(app_skey: bytes, nwkskey: bytes, dev_addr: bytes, fcnt: int, direction: int, frm_payload: bytes, Fport: int) -> bytes:
+    return decrypt_frm_payload(
+        app_skey=app_skey,
+        nwkskey=nwkskey,
+        dev_addr=dev_addr,
+        fcnt=fcnt,
+        direction=1,     # Assuming downlink for encryption
+        frm_payload=frm_payload,
+        Fport=Fport
+    )

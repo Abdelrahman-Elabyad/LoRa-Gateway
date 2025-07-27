@@ -16,7 +16,7 @@ LoRaWANAPPFrame = Struct(
         "FCtrl" / FCtrl,                # Frame control flags and FOpts length
         #Unsigned little endian integer for FCnt
         "FCnt" / Int16ul,               # Frame counter (2 bytes, uplink/downlink tracking)
-        "FOpts" / Bytes(this.FCtrl.FOptsLen)  # Optional MAC commands (0–15 bytes)
+        "FOpts" / Bytes(this.FCtrl.FOptsLen)  # Optional MAC commands (0–15 bytes) Variabel length
     ),
     "FPort" / Byte,                     # Application port (1–223), 0 reserved for MAC-only
     "FRMPayload" / GreedyBytes         # Application payload (encrypted or MAC commands)
