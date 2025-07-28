@@ -5,12 +5,11 @@ from features.mac_commands.mac_cmd_handler import handle_mac_command_by_cid
 from features.security import decrypt_frm_payload
 from config.settings import NWK_SKEY, APP_SKEY
 
-def process_mac_commands(packet_data: bytes):
+def process_mac_commands(parsed_frame):
     """
     Parses a LoRaWAN packet and extracts MAC commands.
     """
     try:
-        parsed_frame = parse_full_lorawan_frame(packet_data)
         direction=0  # Assuming uplink direction for MAC commands extraction
 
         # Extract needed fields from parsed layers

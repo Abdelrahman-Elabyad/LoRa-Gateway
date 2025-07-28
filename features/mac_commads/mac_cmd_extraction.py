@@ -36,7 +36,7 @@ MAC_COMMANDS = {
 #This fucntion is only used to get the Mac Commands frm a given stream of bytes
 #It is used to parse the mac commands from either the FRM payload after decryption or from the FOpts field
 
-def extract_mac_commands_from_fopts(mac_bytes: bytes):
+def extract_mac_commands(mac_bytes: bytes):
 
     i = 0
     commands = []
