@@ -1,4 +1,4 @@
-from Proccessing.frame_parser import parse_full_lorawan_frame
+from frame_parser import parse_full_lorawan_frame
 
 
 #This fucntion should be used to help make descisions on how to interpret a packet recieved
