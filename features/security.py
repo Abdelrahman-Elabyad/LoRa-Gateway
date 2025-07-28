@@ -117,7 +117,6 @@ def decrypt_frm_payload(app_skey: bytes,nwkskey:bytes, dev_addr: bytes, fcnt: in
     aes_cipher = AES.new(key, AES.MODE_ECB)
     payload_len = len(frm_payload)
     num_blocks = (payload_len + 15) // 16
-
     decrypted = bytearray()
 
     for i in range(num_blocks):
@@ -125,7 +124,7 @@ def decrypt_frm_payload(app_skey: bytes,nwkskey:bytes, dev_addr: bytes, fcnt: in
         a_block = bytearray(16)
         a_block[0] = 0x01
         a_block[5] = direction & 0x01
-        a_block[6:10] = dev_addr
+        a_block[6:10] = dev_addr.to_bytes(4, 'little')
         a_block[10:12] = fcnt.to_bytes(2, 'little')
         a_block[15] = (i + 1) & 0xFF  # Counter starts at 1
 
