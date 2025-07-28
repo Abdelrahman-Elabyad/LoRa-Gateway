@@ -13,13 +13,13 @@ def process_mac_commands(parsed_frame):
         direction=0  # Assuming uplink direction for MAC commands extraction
 
         # Extract needed fields from parsed layers
-        fopts       = parsed_frame["application_layer"]["FHDR"]["FOpts"]
-        fopts_len   = parsed_frame["application_layer"]["FHDR"]["FCtrl"]["FOptsLen"]
-        fport       = parsed_frame["application_layer"]["FPort"]
-        frmpayload  = parsed_frame["application_layer"]["FRMPayload"]
-        dev_addr    = parsed_frame["application_layer"]["FHDR"]["DevAddr"]
-        fcnt        = parsed_frame["application_layer"]["FHDR"]["FCnt"]
-        mtype       = parsed_frame["mac_layer"]["MHDR"]["MType"] #check the notes file to know how to use this
+        fopts       = parsed_frame["FOpts"]
+        fopts_len   = parsed_frame["FOptsLen"]
+        fport       = parsed_frame["FPort"]
+        frmpayload  = parsed_frame["FRMPayload"]
+        dev_addr    = parsed_frame["DevAddr"]
+        fcnt        = parsed_frame["FCnt"]
+        mtype       = parsed_frame["MType"] #check the notes file to know how to use this
 
     #Mac commands are Piggybacked in the FOpts field
         if fopts_len > 0 and fport!=0:

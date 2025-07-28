@@ -2,9 +2,12 @@ import binascii
 from functools import reduce
 from operator import xor
 import numpy as np
-from Crypto.Cipher import AES
+from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
 from cryptography.hazmat.primitives.cmac import CMAC
 from cryptography.hazmat.primitives.ciphers import algorithms
+from Crypto.Cipher import AES
+
+
 
 # --- Payload CRC: 16-bit CRC using standard polynomial 
 def verify_crc(payload_bytes: bytes, received_crc: int) -> bool:
