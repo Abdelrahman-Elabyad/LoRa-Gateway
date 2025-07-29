@@ -2,6 +2,8 @@ import binascii
 from functools import reduce
 from operator import xor
 import numpy as np
+import os
+import yaml
 from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
 from cryptography.hazmat.primitives.cmac import CMAC
 from cryptography.hazmat.primitives.ciphers import algorithms
@@ -156,3 +158,33 @@ def encrypt_frm_payload(app_skey: bytes, nwkskey: bytes, dev_addr: bytes, fcnt: 
         frm_payload=frm_payload,
         Fport=Fport
     )
+
+# this fucntion is used to check for replay attacks during the join procedure
+def device_yaml_path_exists_with_devnonce(devnonce_hex: str, deveui_hex: str, directory="device_config") -> str | None:
+    """
+    Checks if the given DevNonce already exists in the YAML file of the specified DevEUI.
+
+    Args:
+        devnonce_hex (str): DevNonce in uppercase hex.
+        deveui_hex (str): DevEUI in uppercase hex.
+        directory (str): Path to device config files.
+
+    Returns:
+        str or None: YAML file path if the DevNonce is found, else None.
+    """
+    yaml_path = os.path.join(directory, f"device_{deveui_hex}.yaml")
+
+    if not os.path.exists(yaml_path):
+        return None
+
+    try:
+        with open(yaml_path, "r") as f:
+            data = yaml.safe_load(f)
+            if data and data.get("DevNonce", "").upper() == devnonce_hex:
+                return yaml_path
+    except Exception as e:
+        print(f"Error reading YAML file: {e}")
+
+    return None
+
+
