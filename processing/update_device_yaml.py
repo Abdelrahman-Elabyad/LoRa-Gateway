@@ -2,7 +2,7 @@ import yaml
 import os
 from datetime import datetime
 
-def generate_device_yaml(mac_commands: bytes, dev_addr):
+def update_device_yaml(mac_commands: bytes, dev_addr):
     
     if isinstance(mac_commands, dict) and "error" in mac_commands:
         print(f"Error: {mac_commands['error']}")

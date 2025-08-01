@@ -9,31 +9,6 @@ from cryptography.hazmat.primitives.cmac import CMAC
 from cryptography.hazmat.primitives.ciphers import algorithms
 from Crypto.Cipher import AES
 
-
-
-# --- Payload CRC: 16-bit CRC using standard polynomial 
-def verify_crc(payload_bytes: bytes, received_crc: int) -> bool:
-    """
-    Verifies a standard 2-byte CRC for PHY Payload using CRC-16 (X.25)
-    """
-    return binascii.crc_hqx(payload_bytes, 0x0000) == received_crc
-
-# --- PHDR CRC: 1-byte XOR-based checksum (LoRa-style)
-def verify_phdr_crc(phdr_bytes: bytes, received_crc: int) -> bool:
-    """
-    Verifies 1-byte XOR checksum for PHDR field
-    """
-    computed_crc = reduce(xor, phdr_bytes, 0x00)
-    return computed_crc == received_crc
-
-# --- Combined Physical Layer CRC Check
-def Physical_Layer_CRC_Checker(phdr: bytes, phdr_crc: int, phy_payload: bytes, payload_crc: int) -> bool:
-    """
-    Verifies both PHDR_CRC (1 byte) and Payload CRC (2 bytes)
-    """
-    return verify_phdr_crc(phdr, phdr_crc) and verify_crc(phy_payload, payload_crc)
-
-
 #You calculate AES-CMAC over B0 + msg(MHDR | MACPayload)
 #Then take the first 4 bytes as your MIC
 def compute_verify_mic(nwkskey: bytes, devaddr: bytes, fcnt: int, direction: int, MHDR: bytes, MacPayload: bytes,MIC) -> bytes:
@@ -72,6 +47,21 @@ def compute_verify_mic(nwkskey: bytes, devaddr: bytes, fcnt: int, direction: int
     print("Calculated MIC:", calculated_mic)
     return calculated_mic == MIC_HEX
 
+#MIC for Join Request is calculated using a different method
+#It uses the APP_KEY and Join Request payload to calculate the MIC
+#NO B0 Block is used here
+#The Join Request payload is the MHDR + MACPayload (18 bytes total)
+def compute_join_request_mic(app_key: bytes, join__request_payload: bytes) -> bytes:
+    """
+    Computes the MIC for a Join Request message as per LoRaWAN 1.0.3 spec.
+    
+    :param app_key: 16-byte AppKey (bytes)
+    :param join_payload: MHDR + MACPayload (18 bytes total)
+    :return: 4-byte MIC
+    """
+    cmac = CMAC(algorithms.AES(app_key))
+    cmac.update(join__request_payload)  # No B0 prefix in Join Request MIC
+    return cmac.finalize()[:4]
 
 
 #Helper Function for the FCnt conversion 

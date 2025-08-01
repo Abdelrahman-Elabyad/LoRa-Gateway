@@ -1,5 +1,5 @@
 #MAC commands 
-from frame_parser import parse_full_lorawan_frame
+from parsing.lora_packet_entry_point import parse_full_lorawan_frame
 from features.mac_commands.mac_cmd_extraction import extract_mac_commands
 from features.mac_commands.mac_cmd_handler import handle_mac_command_by_cid
 from features.security import decrypt_frm_payload
