@@ -9,16 +9,11 @@ def parse_data_up_packet(mtype: int, mhdr: dict, mhdr_byte: bytes, mic: bytes, m
     """
     
     app_result = parse_app_layer(mac_payload)
+    nwk = NWK_SKEY
+    devaddr = app_result["FHDR"]["DevAddr"]
+    counter = app_result["FHDR"]["FCnt"]
 
-    valid = compute_verify_mic(
-        nwkskey=NWK_SKEY,
-        dev_addr=app_result["FHDR"]["DevAddr"],
-        fcnt=app_result["FHDR"]["FCnt"],
-        direction=0,
-        mhdr=mhdr_byte,
-        payload=mac_payload,
-        mic=mic
-    )
+    valid = compute_verify_mic(NWK_SKEY,devaddr,counter,0,mhdr_byte,mac_payload,mic)
 
     if not valid:
         raise ValueError("❌ Invalid MIC in DataUp")
