@@ -1,4 +1,4 @@
-from Tesing_main import handle_lorawan_packet
+from tests.Tesing_main import handle_lorawan_packet
 from config.settings import NWK_SKEY, APP_SKEY, SAMPLE_PACKET_BYTES
 from features.mac_commands.mac_cmd_extraction import extract_mac_commands
 from processing.update_device_yaml import update_device_yaml

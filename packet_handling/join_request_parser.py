@@ -24,9 +24,9 @@ def parse_join_request(packet_data: bytes):
     return {
         "Type": "JoinRequest",
         "MHDR": parsed.MHDR.hex().upper(),
-        "MIC": parsed.MIC.hex().upper(),
         "AppEUI": parsed.MacPayload.AppEUI.hex().upper(),
         "DevEUI": parsed.MacPayload.DevEUI.hex().upper(),
-        "DevNonce": parsed.MacPayload.DevNonce.hex().upper()
+        "DevNonce": parsed.MacPayload.DevNonce.hex().upper(),
+        "MIC": parsed.MIC.hex().upper()
     }
 

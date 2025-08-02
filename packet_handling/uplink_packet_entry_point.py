@@ -1,8 +1,8 @@
 from protocol_layers.mac_layer import parse_mac_layer
-from parsing.parse_packet_by_mtype import parse_lorawan_packet_by_type  
+from packet_handling.dispatch_by_mtype import parse_lorawan_packet_by_type  
 
 
-def parse_full_lorawan_frame(Packet_data: bytes):
+def handle_uplink_packet(Packet_data: bytes):
     """
     Entry point: Parses any LoRaWAN uplink packet and returns a flat, structured dictionary.
     Handles JoinRequest and DataUp types via MType-specific routing.

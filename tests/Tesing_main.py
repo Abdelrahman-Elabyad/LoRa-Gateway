@@ -1,6 +1,5 @@
-from parsing.lora_packet_entry_point import parse_full_lorawan_frame
+from packet_handling.uplink_packet_entry_point import parse_full_lorawan_frame
 from processing.mac_cmd_processing import process_mac_commands
-from processing.update_device_yaml import update_device_yaml
 from config.settings import SAMPLE_PACKET_BYTES
 
 def handle_lorawan_packet(packet_data: bytes):

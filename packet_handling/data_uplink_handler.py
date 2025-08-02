@@ -2,7 +2,7 @@ from protocol_layers.application_layer import parse_app_layer
 from features.security import compute_verify_mic
 from config.settings import NWK_SKEY
 
-def parse_data_up_packet(mtype: int, mhdr: dict, mhdr_byte: bytes, mic: bytes, mac_payload: bytes):
+def handle_data_uplink(mtype: int, mhdr: dict, mhdr_byte: bytes, mic: bytes, mac_payload: bytes):
     """
     Parses and validates Unconfirmed or Confirmed Data Up packets.
     Returns a flat dictionary structure.

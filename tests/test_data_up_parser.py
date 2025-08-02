@@ -1,4 +1,4 @@
-from parsing.data_up_parser import parse_data_up_packet
+from parsing.data_uplink_handler import parse_data_up_packet
 
 def test_data_up_valid_packet():
     # Dummy MHDR = 0x40, DevAddr = 01020304, FCnt = 0001, FPort = 01

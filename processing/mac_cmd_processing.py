@@ -1,5 +1,4 @@
 #MAC commands 
-from parsing.lora_packet_entry_point import parse_full_lorawan_frame
 from features.mac_commands.mac_cmd_extraction import extract_mac_commands
 from features.mac_commands.mac_cmd_handler import handle_mac_command_by_cid
 from features.security import decrypt_frm_payload
@@ -24,14 +23,14 @@ def process_mac_commands(parsed_frame):
     #Mac commands are Piggybacked in the FOpts field
         if fopts_len > 0 and fport!=0:
             mac_commands = extract_mac_commands(fopts)
-            parsed_outputs = [handle_mac_command_by_cid(cmd, i, direction) for i, cmd in enumerate(mac_commands)]
-            return parsed_outputs
+            decoded_mac_commands = [handle_mac_command_by_cid(cmd, i, direction) for i, cmd in enumerate(mac_commands)]
+            return decoded_mac_commands
     #Mac commands are in the Frmpayload after decryption    
         elif len(frmpayload) > 0 and fport==0:
             decrypted_frmpayload = decrypt_frm_payload(APP_SKEY, NWK_SKEY, dev_addr, fcnt, direction, frmpayload, fport)
             mac_commands = extract_mac_commands(decrypted_frmpayload)
-            parsed_outputs = [handle_mac_command_by_cid(cmd, i,direction) for i, cmd in enumerate(mac_commands)]
-            return parsed_outputs
+            decoded_mac_commands = [handle_mac_command_by_cid(cmd, i,direction) for i, cmd in enumerate(mac_commands)]
+            return decoded_mac_commands
 
         return {"message": "No MAC commands found in FOpts or FRMPayload."}
 
