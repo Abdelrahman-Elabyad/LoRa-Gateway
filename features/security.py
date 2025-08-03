@@ -149,5 +149,55 @@ def encrypt_frm_payload(app_skey: bytes, nwkskey: bytes, dev_addr: bytes, fcnt: 
         Fport=Fport
     )
 
+def encrypt_join_accept_payload(mac_payload: bytes, app_key: bytes) -> bytes:
+    """
+    Encrypts a Join-Accept MACPayload according to LoRaWAN 1.0.x spec.
+
+    Steps:
+    1. Reverse the payload bytes
+    2. Encrypt with AES-128 in ECB mode using AppKey
+    3. Reverse the encrypted result again
+
+    Args:
+        mac_payload: Raw MACPayload bytes (AppNonce to CFList, 28 bytes)
+        app_key: 16-byte AppKey (AES key)
+
+    Returns:
+        Encrypted MACPayload as bytes (still needs MHDR + MIC for full PHYPayload)
+    """
+    # Step 1: Reverse the plaintext
+    reversed_payload = mac_payload[::-1]
+
+    # Step 2: AES-128-ECB encryption
+    cipher = AES.new(app_key, AES.MODE_ECB)
+    encrypted_reversed = cipher.encrypt(reversed_payload)
+
+    # Step 3: Reverse again for final output
+    encrypted_payload = encrypted_reversed[::-1]
+
+    return encrypted_payload
+
+
+def generate_join_accept_mic(app_key: bytes, mhdr: bytes, join_accept_payload: bytes) -> bytes:
+    """
+    Computes the MIC for the Join-Accept message using AES-CMAC.
+
+    Args:
+        app_key: 16-byte AppKey
+        mhdr: 1-byte MHDR (should be 0x20 for Join-Accept)
+        join_accept_payload: encrypted Join-Accept payload (after AES-ECB encryption)
+
+    Returns:
+        4-byte MIC as bytes
+    """
+    if not isinstance(mhdr, bytes):
+        mhdr = bytes([mhdr])  # convert int to single byte
+
+    message = mhdr + join_accept_payload  # Full message used in MIC
+
+    cmac = CMAC.new(app_key, ciphermod=AES)
+    cmac.update(message)
+
+    return cmac.digest()[:4]  # MIC is first 4 bytes of AES-CMAC output
 
 

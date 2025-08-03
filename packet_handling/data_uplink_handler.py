@@ -9,7 +9,6 @@ def handle_data_uplink(mtype: int, mhdr: dict, mhdr_byte: bytes, mic: bytes, mac
     """
     
     app_result = parse_app_layer(mac_payload)
-    nwk = NWK_SKEY
     devaddr = app_result["FHDR"]["DevAddr"]
     counter = app_result["FHDR"]["FCnt"]
 

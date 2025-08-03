@@ -28,6 +28,12 @@ def genrate_update_device_yaml_file(mac_command_features: list, dev_eui: str, ap
         # Ensure Features exists
         if "Features" not in device_data:
             device_data["Features"] = {}
+        # ⬇️ Add or update MAC command features
+        if isinstance(mac_command_features, list):
+            for cmd in mac_command_features:
+                fields = cmd.get("Fields", {})
+                for key, value in fields.items():
+                    device_data["Features"][key] = value
 
     else:
         # First time device registration
@@ -38,13 +44,6 @@ def genrate_update_device_yaml_file(mac_command_features: list, dev_eui: str, ap
             "JoinStatus": "Pending",
             "Features": {}
         }
-
-    # ⬇️ Add or update MAC command features
-    if isinstance(mac_command_features, list):
-        for cmd in mac_command_features:
-            fields = cmd.get("Fields", {})
-            for key, value in fields.items():
-                device_data["Features"][key] = value
 
     # Timestamp
     device_data["LastUpdated"] = datetime.utcnow().isoformat() + "Z"
