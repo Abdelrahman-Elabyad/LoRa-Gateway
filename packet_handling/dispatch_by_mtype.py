@@ -1,8 +1,10 @@
 from packet_handling.join_request_parser import parse_join_request
-from packet_handling.data_uplink_handler import handle_data_uplink()
-from processing.device_registry import genrate_update_device_yaml_file
+from packet_handling.data_uplink_handler import handle_data_uplink
 from processing.mac_cmd_processing import process_mac_commands
 from join_accept_handling.join_accept_generator import send_join_accept
+from processing.device_registry import genrate_update_device_yaml_file  
+from Key_generation.NewSKey_AppSKey_generation import derive_session_keys
+from processing.device_registry import update_device_yaml_with_mac_commands , initialize_device_yaml
 def parse_lorawan_packet_by_type(mtype: int, Packet_data: bytes,mhdr, mhdr_byte: dict, mac_payload: bytes, mic: bytes):
     
     if mtype == 0:
@@ -11,6 +13,7 @@ def parse_lorawan_packet_by_type(mtype: int, Packet_data: bytes,mhdr, mhdr_byte:
         app_eui = parsed_frame["AppEUI"]
         dev_nonce = parsed_frame["DevNonce"]
         mac_cmd_dict= None
+        initialize_device_yaml(dev_eui, app_eui, dev_nonce, output_dir="device_config")
         send_join_accept()
         #from it get the NewSKey and AppSKey
         derive_session_keys(key_type: int, app_key: bytes, app_nonce: bytes, net_id: bytes, dev_nonce: bytes)
@@ -24,7 +27,7 @@ def parse_lorawan_packet_by_type(mtype: int, Packet_data: bytes,mhdr, mhdr_byte:
         dev_eui = parsed_frame["DevEUI"]
         app_eui = parsed_frame["AppEUI"]
         dev_nonce = parsed_frame["DevNonce"]
-        genrate_update_device_yaml_file(mac_cmd_dict,dev_eui, app_eui, dev_nonce, output_dir="device_config")
+        update_device_yaml_with_mac_commands(dev_eui, mac_cmd_dict, output_dir="device_config")
         #confirmed_data_up_packet need to send an acknowledgment
         if mtype ==4 :
             send_acknowledgment(parsed_frame) #fucntion used to send the acknowledgment in RX1 or RX2 window
