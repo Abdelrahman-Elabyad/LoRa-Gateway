@@ -15,11 +15,12 @@ devices_eui:
   "0102030405060708":
     label: "Office Sensor A1"
     AppKey: "00112233445566778899AABBCCDDEEFF"
+    NwkID: 18           # decimal (0x12)
+    NwkAddr: 214247     # decimal (0x34567)
 
   "1122334455667788":
-    label: "Vehicle Tracker Car 17"
-    AppKey: "8899AABBCCDDEEFF0011223344556677"
+    label: "Vehicle Tracker"
+    AppKey: "AABBCCDDEEFF11223344556677889900"
+    NwkID: 33
+    NwkAddr: 123456
 
-  "AABBCCDDEEFF0011":
-    label: "Park Air Quality Sensor"
-    AppKey: "1234567890ABCDEF1234567890ABCDEF"

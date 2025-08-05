@@ -1,6 +1,7 @@
 from construct import Byte, Int32ub, Struct, Int24ub, Bytes,BitStruct, BitsInteger
 from features.security import encrypt_join_accept_payload, generate_join_accept_mic
-
+from processing.device_registry import get_app_key, update_device_yaml_with_join_parameters, get_network_ids
+from join_accept_handling.Intialize_join_request_param import *
 #Join accept structure
 #PHYPayload = MHDR | Encrypted(MACPayload) | MIC
 
@@ -28,7 +29,7 @@ def generate_join_accept_mhdr() -> bytes:
     ))
     return mhdr_bits  # single byte
 
-def intailize_join_request_parameters():
+def intailize_join_request_parameters(dev_eui):
     """
     Initializes the Join Request frame structure
     Generates AppNonce
@@ -37,8 +38,7 @@ def intailize_join_request_parameters():
     RxDelay
     CF list  (list of channel frequencies)
     """
-    nwk_id = 0x12
-    nwk_addr = 0x34567
+    nwk_id,nwk_addr=get_network_ids(dev_eui)
 
     return {
         "AppNonce": generate_app_nonce(),  # Int
@@ -49,12 +49,14 @@ def intailize_join_request_parameters():
         "CFList": generate_cf_list()
     }
 
-def generate_join_accept_payload():
+def generate_join_accept_payload(dev_eui):
     """
     Builds and returns a Join accept Payload in bytes.
     """
     # Get all required fields
-    params = intailize_join_request_parameters()
+    params = intailize_join_request_parameters(dev_eui)
+
+    update_device_yaml_with_join_parameters(dev_eui, params)
 
     # Use construct to build the Join-Accept binary structure
     join_accept_payload = JoinAccept.build({
@@ -70,9 +72,12 @@ def generate_join_accept_payload():
     
     return join_accept_payload
  
-def generate_join_accept_fullframe():
+def generate_join_accept_fullframe(dev_eui):
     # Step 1: Build raw MACPayload (unencrypted)
-    join_accept_payload = generate_join_accept_payload()
+    join_accept_payload = generate_join_accept_payload(dev_eui)
+
+    #Get the app_key that corresponds to teh dev_eui from the yaml file
+    app_key=get_app_key(dev_eui)
 
     # Step 2: Build MHDR (MType = 0x01 for Join-Accept)
     mhdr = generate_join_accept_mhdr()
@@ -88,10 +93,11 @@ def generate_join_accept_fullframe():
 
     return full_packet
 
-def send_join_accept():
+def send_join_accept(dev_eui):
     """
     this fucntion is supposed to call a function to sedn teh data to teh end device
     """
-    generate_join_accept_fullframe()
-    return app_nonce, net_id, dev_addr #will be used to genrate the 
+    generate_join_accept_fullframe(dev_eui)
+    #Need to send it somehow to an end device
+    
     

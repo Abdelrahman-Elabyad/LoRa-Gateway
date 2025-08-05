@@ -1,13 +1,9 @@
 from Crypto.Cipher import AES
+from processing.device_registry import get_app_key, get_appnonce_netid_devnonce
 
 #need to genrate NEWSKEY AND APPSKEY
 #Need to sotre them in teh device yaml file so they can be extracted accordign to teh deviec ADdress
-from Crypto.Cipher import AES
-import yaml
-import os
-
-def generate_session_keys(dev_eui: str, app_nonce: bytes, net_id: bytes, dev_nonce: bytes,
-                          config_path="config/sample_packet_config.yaml") -> tuple[bytes, bytes]:
+def generate_session_keys(dev_eui: str, config_path="config/network_server_device_config.yaml") -> tuple[bytes, bytes]:
     """
     Derives both NwkSKey and AppSKey for a device by looking up its AppKey using DevEUI.
 
@@ -21,24 +17,9 @@ def generate_session_keys(dev_eui: str, app_nonce: bytes, net_id: bytes, dev_non
     Returns:
         (NwkSKey, AppSKey) as 16-byte AES keys
     """
-    if not os.path.exists(config_path):
-        raise FileNotFoundError(f"❌ Registry file not found: {config_path}")
-
-    with open(config_path, "r") as f:
-        registry = yaml.safe_load(f)
-
-    devices = registry.get("devices_eui", {})
-    dev_info = devices.get(dev_eui.upper()) #returns the values if it finds it else returns none
-
-    if not dev_info:
-        raise ValueError(f"❌ DevEUI {dev_eui} not found in device registry.")
-
-    app_key_hex = dev_info.get("AppKey")
-    if not app_key_hex:
-        raise ValueError(f"❌ AppKey missing for DevEUI {dev_eui}")
-
-    app_key = bytes.fromhex(app_key_hex)
-
+    #Function to get the App_key that corresponds to teh device_eui
+    app_key=get_app_key(dev_eui,config_path)
+    app_nonce, net_id, dev_nonce =get_appnonce_netid_devnonce(dev_eui)
     # Validate input lengths
     if not (len(app_key) == 16 and len(app_nonce) == 3 and len(net_id) == 3 and len(dev_nonce) == 2):
         raise ValueError("❌ Invalid input lengths: AppKey(16), AppNonce(3), NetID(3), DevNonce(2)")
