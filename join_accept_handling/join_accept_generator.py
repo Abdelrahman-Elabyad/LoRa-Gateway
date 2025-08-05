@@ -54,20 +54,20 @@ def generate_join_accept_payload(dev_eui):
     Builds and returns a Join accept Payload in bytes.
     """
     # Get all required fields
-    params = intailize_join_request_parameters(dev_eui)
+    payload_param = intailize_join_request_parameters(dev_eui)
 
-    update_device_yaml_with_join_parameters(dev_eui, params)
+    update_device_yaml_with_join_parameters(dev_eui, payload_param)
 
     # Use construct to build the Join-Accept binary structure
     join_accept_payload = JoinAccept.build({
-        "AppNonce": params["AppNonce"],
-        "NetID": list(params["NetID"]),         # convert bytes to list of 3 integers
-        ""
-        "": list(params["DevAddr"]),     # convert bytes to list of 4 integers
-        "DLSettings": params["DLSettings"],
-        "RxDelay": params["RxDelay"],
-        "CFList": list(params["CFList"])        # convert 16-byte array to list of ints
+    "AppNonce": payload_param["AppNonce"],
+    "NetID": list(payload_param["NetID"]),         # 3 bytes → list of 3 ints
+    "DevAddr": list(payload_param["DevAddr"]),     # 4 bytes → list of 4 ints ✅ FIXED
+    "DLSettings": payload_param["DLSettings"],
+    "RxDelay": payload_param["RxDelay"],
+    "CFList": list(payload_param["CFList"])        # 16 bytes → list of 16 ints
     })
+
     # Encrypt (reverse → AES-ECB → reverse)
     
     return join_accept_payload
@@ -81,6 +81,8 @@ def generate_join_accept_fullframe(dev_eui):
 
     # Step 2: Build MHDR (MType = 0x01 for Join-Accept)
     mhdr = generate_join_accept_mhdr()
+
+    print("JoinAccept Payload Length:", len(join_accept_payload))
 
     # Step 3: Encrypt MACPayload (with reversal, AES-ECB, and reverse again)
     encrypted_payload = encrypt_join_accept_payload(join_accept_payload, app_key)

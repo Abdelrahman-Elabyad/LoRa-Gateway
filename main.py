@@ -1,24 +1,27 @@
-from tests.Tesing_main import handle_lorawan_packet
-from config.settings import NWK_SKEY, APP_SKEY, SAMPLE_PACKET_BYTES
-from features.mac_commands.mac_cmd_extraction import extract_mac_commands
-from processing.update_device_yaml import update_device_yaml
-from features.mac_commands.mac_cmd_handler import handle_mac_command_by_cid
+from packet_handling.uplink_packet_entry_point import handle_uplink_packet
+import yaml
+import os
 
 def main():
+    # Load the Join Request packet from YAML config
+    yaml_path = "config/network_server_device_config.Yaml"
+    if not os.path.exists(yaml_path):
+        raise FileNotFoundError(f"❌ YAML config not found at: {yaml_path}")
 
-    print("Packet length:", len(SAMPLE_PACKET_BYTES))
-    print("Packet hex:", SAMPLE_PACKET_BYTES.hex().upper())
+    with open(yaml_path, "r", encoding="utf-8") as f:
+        config = yaml.safe_load(f)
 
-    # Optionally simulate decrypted MAC commands (if FPort = 0)
-    frm_payload_decrypted = "7E500AB646"
-    dev_addr = "01020304"  # Placeholder — update based on actual DevAddr if needed
-    mac_commands = extract_mac_commands(bytes.fromhex(frm_payload_decrypted))
-    parsed_outputs = [handle_mac_command_by_cid(cmd, i, 0) for i, cmd in enumerate(mac_commands)]
-    update_device_yaml(parsed_outputs, dev_addr)
-    print("Extracted MAC commands:", parsed_outputs)
 
-    # Run your full parser handler
-    handle_lorawan_packet(SAMPLE_PACKET_BYTES)
+    # Grab the first sample packet (assumed to be a Join Request)
+    packet_hex = config["sample_packets"][0]["hex"]
+    packet_bytes = bytes.fromhex(packet_hex)
+
+    print("✅ Using Join Request packet from YAML")
+    print("Packet length:", len(packet_bytes))
+    print("Packet hex:", packet_bytes.hex().upper())
+
+    # Only one required call:
+    handle_uplink_packet(packet_bytes)
 
 if __name__ == "__main__":
     main()

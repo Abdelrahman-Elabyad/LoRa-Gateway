@@ -1,0 +1,42 @@
+DevEUI: 0807060504030201
+AppEUI: '8877665544332211'
+DevNonces:
+- '1234'
+JoinStatus: Accepted
+DevAddr: E7440324
+AppSKey: D3AEFC4CF5C0FE6BAB03C4003FA9EC0B
+NwkSKey: 7EB08748CBF1B6961553B16F9BCC8F46
+FCntUp: 0
+FCntDown: 0
+DeviceSettings:
+  DataRate: null
+  TxPower: null
+  Channels: []
+  RX1Delay: null
+  RX2DataRate: null
+  RX2Freq: null
+  DutyCycle: null
+MACCommands: {}
+Features: {}
+LastUpdated: '2025-08-05T16:00:02.129121Z'
+AppNonce: '9034268'
+NetID: '120000'
+DLSettings: 0
+RxDelay: 1
+CFList:
+- '18'
+- 4F
+- '84'
+- E8
+- '56'
+- '84'
+- B8
+- 5E
+- '84'
+- '88'
+- '66'
+- '84'
+- '58'
+- 6E
+- '84'
+- '00'

@@ -1,12 +1,12 @@
 import os
 import random
 
-def generate_app_nonce() -> bytes:
+def generate_app_nonce() -> int:
     """
-    Generates a random 3-byte AppNonce (little endian).
-    Used by the network server in Join-Accept.
+    Generates a random 3-byte AppNonce (as integer).
+    LoRaWAN spec: AppNonce is little-endian when serialized, but stored as int.
     """
-    return random.getrandbits(24).to_bytes(3, "little")
+    return random.getrandbits(24)  # 3-byte int
 
 
 def generate_device_addr(nwk_id: int, nwk_addr: int) -> bytes:

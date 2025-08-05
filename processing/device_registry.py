@@ -169,7 +169,7 @@ def validate_and_update_fcnt_up(dev_eui, incoming_fcnt, output_dir="device_confi
         return False
 
 
-def get_app_key(dev_eui,config_path="config/sample_packet_config.yaml"):
+def get_app_key(dev_eui,config_path="config/network_server_device_config.yaml"):
 
     if not os.path.exists(config_path):
         raise FileNotFoundError(f"❌ Registry file not found: {config_path}")
@@ -194,41 +194,51 @@ def get_app_key(dev_eui,config_path="config/sample_packet_config.yaml"):
 
 def get_appnonce_netid_devnonce(dev_eui: str, yaml_dir="device_config") -> tuple[bytes, bytes, bytes]:
     """
-    Loads AppNonce, NetID, and latest DevNonce for a device from its YAML file.
+    Loads AppNonce, NetID, and latest DevNonce from a device YAML file.
+
+    Args:
+        dev_eui: DevEUI in LSB hex format (e.g., '0807060504030201')
+        yaml_dir: Directory where the device YAMLs are stored
 
     Returns:
-        (app_nonce, net_id, dev_nonce) as byte values
+        Tuple of (AppNonce, NetID, DevNonce) all as bytes
     """
     yaml_path = os.path.join(yaml_dir, f"device_{dev_eui}.yaml")
 
     if not os.path.exists(yaml_path):
-        raise FileNotFoundError(f"❌ YAML file for {dev_eui} not found in {yaml_dir}")
+        raise FileNotFoundError(f"❌ YAML file for {dev_eui} not found at {yaml_path}")
 
-    with open(yaml_path, "r") as f:
-        device_data = yaml.safe_load(f) or {}
+    with open(yaml_path, "r", encoding="utf-8") as f:
+        device_data = yaml.safe_load(f)
 
     try:
-        app_nonce = bytes.fromhex(device_data["AppNonce"])
-        net_id = bytes.fromhex(device_data["NetID"])
+        # Convert AppNonce from decimal string to 3-byte little-endian
+        app_nonce = int(device_data["AppNonce"]).to_bytes(3, "little")
+
+        # Convert NetID from decimal string to 3-byte little-endian
+        net_id = int(device_data["NetID"]).to_bytes(3, "little")
+
+        # Convert latest DevNonce from hex string to bytes
         dev_nonce_list = device_data.get("DevNonces", [])
         if not dev_nonce_list:
             raise ValueError("❌ DevNonce list is empty.")
-        dev_nonce = bytes.fromhex(dev_nonce_list[-1])  # Use the latest DevNonce
+        dev_nonce = bytes.fromhex(dev_nonce_list[-1])  # 2 bytes
+
     except KeyError as e:
-        raise ValueError(f"❌ Missing key in YAML: {e}")
+        raise ValueError(f"❌ Missing key in device YAML: {e}")
     except Exception as e:
         raise ValueError(f"❌ Error parsing YAML for {dev_eui}: {e}")
 
     return app_nonce, net_id, dev_nonce
 
 
-def get_network_ids(dev_eui: str, config_path="config/network_server_device_config.yaml") -> tuple[int, int]:
+def get_network_ids(dev_eui: str, config_path: str = "config/network_server_device_config.yaml") -> tuple[int, int]:
     """
-    Retrieves NwkID and NwkAddr for a given DevEUI from the device config file.
+    Retrieves NwkID and NwkAddr for a given DevEUI from a central registry YAML file.
 
     Args:
-        dev_eui: DevEUI in hex string format
-        config_path: Path to the device registry YAML file
+        dev_eui: DevEUI in hex string format (LSB, as stored in devices_eui)
+        config_path: Path to the central device registry YAML file
 
     Returns:
         Tuple (nwk_id, nwk_addr) as integers
@@ -236,14 +246,14 @@ def get_network_ids(dev_eui: str, config_path="config/network_server_device_conf
     if not os.path.exists(config_path):
         raise FileNotFoundError(f"❌ Registry file not found at {config_path}")
 
-    with open(config_path, "r") as f:
+    with open(config_path, "r", encoding="utf-8") as f:
         registry = yaml.safe_load(f)
 
     devices = registry.get("devices_eui", {})
     dev_info = devices.get(dev_eui.upper())
 
     if not dev_info:
-        raise ValueError(f"❌ DevEUI {dev_eui} not found in registry.")
+        raise ValueError(f"❌ DevEUI {dev_eui} not found in central registry.")
 
     try:
         nwk_id = int(dev_info["NwkID"])

@@ -66,8 +66,6 @@ def analyse_mac_cmds(mac_command_list: list[dict]) -> list[str]:
                 snr = fields.get("SNRMargin")
                 actions.append(f"🔋 DevStatusAns received → Battery: {battery}, SNR Margin: {snr} dB → Log or adapt ADR if needed.")
 
-            case _:
-                actions.append(f"❓ Unknown or unhandled MAC command: CID {cid} ({name})")
             case "0x07":
                 freq_ack = fields.get("FrequencyACK")
                 dr_range_ack = fields.get("DRRangeACK")
@@ -103,5 +101,8 @@ def analyse_mac_cmds(mac_command_list: list[dict]) -> list[str]:
                     if not ch_idx_ack:
                         reasons.append("❌ Channel index rejected")
                     actions.append(f"⚠️ DlChannelAns: Some settings rejected ({', '.join(reasons)}) → Consider retrying DlChannelReq.")
+
+            case _:
+                actions.append(f"❓ Unknown or unhandled MAC command: CID {cid} ({name})")        
 
     return actions

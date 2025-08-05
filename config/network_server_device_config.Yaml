@@ -1,7 +1,9 @@
-# sample_packet_config.yaml
-
 sample_packets:
-  # Each packet listed with a description
+  # Join Request Packet (valid MIC, generated with AppKey below)
+  - description: OTAA Join Request (valid MIC, LSB format)
+    hex: "00887766554433221108070605040302011234F20B8567"
+
+  # Original example (MAC layer only)
   - description: Physical payload (MAC Layer only)
     hex: "400403020100010148656C6C6FAABBCCDD"
 
@@ -9,18 +11,17 @@ session_keys:
   nwk_skey: "0102030405060708090A0B0C0D0E0F10"
   app_skey: "101112131415161718191A1B1C1D1E1F"
 
-# Device Registry for OTAA-based LoRaWAN Devices
-# Used to associate DevEUIs with AppKeys, AppEUIs, and device metadata
 devices_eui:
-  "0102030405060708":
+  "0807060504030201":  # LSB format from JoinRequest payload
     label: "Office Sensor A1"
     AppKey: "00112233445566778899AABBCCDDEEFF"
-    NwkID: 18           # decimal (0x12)
-    NwkAddr: 214247     # decimal (0x34567)
+    NwkID: 18
+    NwkAddr: 214247
 
-  "1122334455667788":
+  "8877665544332211":
     label: "Vehicle Tracker"
     AppKey: "AABBCCDDEEFF11223344556677889900"
     NwkID: 33
     NwkAddr: 123456
+
 
