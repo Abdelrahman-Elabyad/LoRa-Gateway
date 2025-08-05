@@ -1,7 +1,7 @@
 
 #Need to
 
-def analyze_mac_commands(mac_command_list: list[dict]) -> list[str]:
+def analyse_mac_cmds(mac_command_list: list[dict]) -> list[str]:
     """
     Analyzes a list of MAC command dictionaries and returns a list of action messages.
     Each command must contain: CID (e.g. "0x03"), Name, and Fields.
