@@ -1,0 +1,25 @@
+# sample_packet_config.yaml
+
+sample_packets:
+  # Each packet listed with a description
+  - description: Physical payload (MAC Layer only)
+    hex: "400403020100010148656C6C6FAABBCCDD"
+
+session_keys:
+  nwk_skey: "0102030405060708090A0B0C0D0E0F10"
+  app_skey: "101112131415161718191A1B1C1D1E1F"
+
+# Device Registry for OTAA-based LoRaWAN Devices
+# Used to associate DevEUIs with AppKeys, AppEUIs, and device metadata
+devices_eui:
+  "0102030405060708":
+    label: "Office Sensor A1"
+    AppKey: "00112233445566778899AABBCCDDEEFF"
+
+  "1122334455667788":
+    label: "Vehicle Tracker Car 17"
+    AppKey: "8899AABBCCDDEEFF0011223344556677"
+
+  "AABBCCDDEEFF0011":
+    label: "Park Air Quality Sensor"
+    AppKey: "1234567890ABCDEF1234567890ABCDEF"

@@ -60,7 +60,8 @@ def generate_join_accept_payload():
     join_accept_payload = JoinAccept.build({
         "AppNonce": params["AppNonce"],
         "NetID": list(params["NetID"]),         # convert bytes to list of 3 integers
-        "DevAddr": list(params["DevAddr"]),     # convert bytes to list of 4 integers
+        ""
+        "": list(params["DevAddr"]),     # convert bytes to list of 4 integers
         "DLSettings": params["DLSettings"],
         "RxDelay": params["RxDelay"],
         "CFList": list(params["CFList"])        # convert 16-byte array to list of ints
