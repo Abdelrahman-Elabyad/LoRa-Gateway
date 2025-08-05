@@ -92,4 +92,6 @@ def send_join_accept():
     """
     this fucntion is supposed to call a function to sedn teh data to teh end device
     """
+    generate_join_accept_fullframe()
+    return app_nonce, net_id, dev_addr #will be used to genrate the 
     
