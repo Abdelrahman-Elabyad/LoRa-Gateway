@@ -102,5 +102,6 @@ def send_join_accept(dev_eui):
     full_packet = generate_join_accept_fullframe(dev_eui)
     # TODO: send `full_packet` over your socket/radio/downlink queue
     #Need to send it somehow to an end device
+    return full_packet
     
     

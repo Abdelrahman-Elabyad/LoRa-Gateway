@@ -13,12 +13,11 @@ def parse_lorawan_packet_by_type(mtype: int, Packet_data: bytes,mhdr, mhdr_byte:
         dev_eui = parsed_frame["DevEUI"]
         app_eui = parsed_frame["AppEUI"]
         dev_nonce = parsed_frame["DevNonce"]
-        mac_cmd_dict= None
         initialize_device_yaml(dev_eui, app_eui, dev_nonce, output_dir="device_config")
-        send_join_accept(dev_eui)
+        join_accept_packet=send_join_accept(dev_eui)
         nwk_skey,app_skey=generate_session_keys(dev_eui)
         update_device_yaml_with_session_keys(dev_eui, nwk_skey, app_skey, output_dir="device_config")
-
+        print(join_accept_packet)
     elif mtype in [2, 4]:
         parsed_frame=handle_data_uplink(mtype, mhdr, mhdr_byte, mic, mac_payload)
         mac_cmd_dict=process_mac_commands(parsed_frame)

@@ -4,8 +4,8 @@ DevNonces:
 - '1234'
 JoinStatus: Accepted
 DevAddr: E7440324
-AppSKey: D3AEFC4CF5C0FE6BAB03C4003FA9EC0B
-NwkSKey: 7EB08748CBF1B6961553B16F9BCC8F46
+AppSKey: 281B0CFC11C7663DCACB41749FACF7AB
+NwkSKey: CB3FB6EFD3A3B793B3652172FA29E23D
 FCntUp: 0
 FCntDown: 0
 DeviceSettings:
@@ -18,8 +18,8 @@ DeviceSettings:
   DutyCycle: null
 MACCommands: {}
 Features: {}
-LastUpdated: '2025-08-05T16:00:02.129121Z'
-AppNonce: '9034268'
+LastUpdated: '2025-08-05T16:05:37.121406Z'
+AppNonce: '2231004'
 NetID: '120000'
 DLSettings: 0
 RxDelay: 1
