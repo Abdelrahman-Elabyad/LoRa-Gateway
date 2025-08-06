@@ -1,10 +1,10 @@
 from construct import Byte, Int32ub, Struct, Int24ub, Bytes,BitStruct, BitsInteger
 from features.security import encrypt_join_accept_payload, generate_join_accept_mic
-from processing.device_registry import get_app_key, update_device_yaml_with_join_parameters, get_network_ids
+from processing.device_registry import get_app_key, update_device_yaml_with_join_parameters, get_network_ids, store_devaddr_to_deveui_mapping
 from join_accept_handling.Intialize_join_request_param import *
+
 #Join accept structure
 #PHYPayload = MHDR | Encrypted(MACPayload) | MIC
-
 JoinAccept =Struct(
         AppNonce=Int24ub,
         NetID=Byte[3],
@@ -14,12 +14,14 @@ JoinAccept =Struct(
         CFList=Byte[16],  # Optional, But since we use EU 868 so we need to use it 
     )
 
+
 # Define MHDR structure
 MHDRStruct = BitStruct(
     "MType" / BitsInteger(3),  # Message Type: 0x01 for Join-Accept
     "RFU" / BitsInteger(3),    # Reserved for Future Use (set to 0)
     "Major" / BitsInteger(2)   # Major version: always 0 for LoRaWAN 1.0.x
 )
+
 
 def generate_join_accept_mhdr() -> bytes:
     mhdr_bits = MHDRStruct.build(dict(
@@ -51,26 +53,38 @@ def intailize_join_request_parameters(dev_eui):
 
 def generate_join_accept_payload(dev_eui):
     """
-    Builds and returns a Join accept Payload in bytes.
+    Builds and returns a Join-Accept payload in bytes,
+    and updates the DevAddr ↔ DevEUI mapping.
     """
-    # Get all required fields
+    # Step 1: Initialize keys and values (AppNonce, DevAddr, etc.)
     payload_param = intailize_join_request_parameters(dev_eui)
 
+    # Step 2: Update device YAML with keys
     update_device_yaml_with_join_parameters(dev_eui, payload_param)
 
-    # Use construct to build the Join-Accept binary structure
+    # Step 3: ⬇️ Extract DevAddr as hex string
+    dev_addr_bytes = payload_param["DevAddr"]  # This is a bytes object (or list of ints)
+    if isinstance(dev_addr_bytes, list):
+        dev_addr_bytes = bytes(dev_addr_bytes)
+    dev_addr_hex = dev_addr_bytes.hex().upper()
+
+    # Step 4: Store mapping DevAddr → DevEUI
+    store_devaddr_to_deveui_mapping(dev_addr_hex, dev_eui)
+
+    # Step 5: Build Join-Accept payload (as per LoRaWAN)
     join_accept_payload = JoinAccept.build({
-    "AppNonce": payload_param["AppNonce"],
-    "NetID": list(payload_param["NetID"]),         # 3 bytes → list of 3 ints
-    "DevAddr": list(payload_param["DevAddr"]),     # 4 bytes → list of 4 ints ✅ FIXED
-    "DLSettings": payload_param["DLSettings"],
-    "RxDelay": payload_param["RxDelay"],
-    "CFList": list(payload_param["CFList"])        # 16 bytes → list of 16 ints
+        "AppNonce": payload_param["AppNonce"],
+        "NetID": list(payload_param["NetID"]),
+        "DevAddr": list(payload_param["DevAddr"]),
+        "DLSettings": payload_param["DLSettings"],
+        "RxDelay": payload_param["RxDelay"],
+        "CFList": list(payload_param["CFList"])
     })
 
-    # Encrypt (reverse → AES-ECB → reverse)
-    
+    print(join_accept_payload)
+
     return join_accept_payload
+
  
 def generate_join_accept_fullframe(dev_eui):
     # Step 1: Build raw MACPayload (unencrypted)

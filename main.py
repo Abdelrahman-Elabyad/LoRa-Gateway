@@ -11,7 +11,6 @@ def main():
     with open(yaml_path, "r", encoding="utf-8") as f:
         config = yaml.safe_load(f)
 
-
     # Grab the first sample packet (assumed to be a Join Request)
     packet_hex = config["sample_packets"][0]["hex"]
     packet_bytes = bytes.fromhex(packet_hex)

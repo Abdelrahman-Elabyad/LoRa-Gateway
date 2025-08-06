@@ -264,3 +264,95 @@ def get_network_ids(dev_eui: str, config_path: str = "config/network_server_devi
         raise ValueError(f"❌ NwkID or NwkAddr for {dev_eui} is not a valid integer.")
 
     return nwk_id, nwk_addr
+
+
+def get_device_session_keys(dev_eui, output_dir="device_config"):
+    """
+    Loads a device's YAML config and returns the NwkSKey and AppSKey.
+    """
+    yaml_path = os.path.join(output_dir, f"device_{dev_eui}.yaml")
+
+    if not os.path.exists(yaml_path):
+        raise FileNotFoundError(f"❌ YAML file for DevEUI {dev_eui} not found at {yaml_path}")
+
+    with open(yaml_path, "r") as file:
+        data = yaml.safe_load(file)
+
+    nwk_skey = data.get("NwkSKey")
+    app_skey = data.get("AppSKey")
+
+    if nwk_skey is None or app_skey is None:
+        raise KeyError(f"❌ One or both session keys (NwkSKey, AppSKey) are missing in the YAML for DevEUI {dev_eui}")
+
+    return nwk_skey, app_skey
+
+
+def store_devaddr_to_deveui_mapping(dev_addr: str, dev_eui: str, index_file="config/DevAddrToDevEUI.yaml"):
+    """
+    Stores a mapping of DevAddr to DevEUI in a central YAML file 
+    to be used later on as teh packets later are only identified using dev_addr.
+    """
+    # Normalize input (always upper-case hex)
+    dev_addr = dev_addr.upper()
+    dev_eui = dev_eui.upper()
+
+    # Ensure config file exists
+    if os.path.exists(index_file):
+        with open(index_file, "r") as f:
+            data = yaml.safe_load(f) or {}
+    else:
+        data = {}
+
+    # Ensure "DevAddrToDevEUI" section exists
+    if "DevAddrToDevEUI" not in data:
+        data["DevAddrToDevEUI"] = {}
+
+    # Update the mapping
+    data["DevAddrToDevEUI"][dev_addr] = dev_eui
+
+    # Write back to the YAML file
+    with open(index_file, "w") as f:
+        yaml.safe_dump(data, f)
+
+    print(f"✅ Stored mapping: DevAddr {dev_addr} → DevEUI {dev_eui}")
+
+
+def get_dev_eui_from_dev_addr(dev_addr, mapping_file="config/DevAddrToDevEUI.yaml"):
+    """
+    Returns the DevEUI corresponding to a given DevAddr from the mapping file.
+    """
+    dev_addr = dev_addr.upper()
+
+    if not os.path.exists(mapping_file):
+        raise FileNotFoundError(f"Mapping file not found: {mapping_file}")
+
+    with open(mapping_file, "r") as f:
+        data = yaml.safe_load(f) or {}
+
+    dev_eui = data.get("DevAddrToDevEUI", {}).get(dev_addr)
+
+    if dev_eui is None:
+        raise KeyError(f"DevAddr {dev_addr} not found in mapping.")
+
+    return dev_eui
+
+
+# Note : teh device yaml file should be deleted after disconnection i.e before another join request and should be go back to default setup settings
+def delete_device_yaml_file(dev_eui, output_dir="device_config"):
+    """
+    Deletes the YAML configuration file for a given DevEUI if it exists.
+    """
+    yaml_path = os.path.join(output_dir, f"device_{dev_eui}.yaml")
+
+    if os.path.exists(yaml_path):
+        try:
+            os.remove(yaml_path)
+            print(f"✅ Device YAML file deleted: {yaml_path}")
+            return True
+        except Exception as e:
+            print(f"❌ Error deleting file {yaml_path}: {e}")
+            return False
+    else:
+        print(f"⚠️ Device YAML file not found: {yaml_path}")
+        return False
+
