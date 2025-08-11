@@ -1,108 +1,98 @@
+from typing import List, Dict, Any, Optional
 
-#Need to
-
-def analyse_mac_cmds(mac_command_list: list[dict]) -> list[str]:
+def build_downlink_plan_from_uplink(parsed_mac_cmds: List[Dict[str, Any]]) -> Dict[str, List[Dict[str, Any]]]:
     """
-    Analyzes a list of MAC command dictionaries and returns a list of action messages.
-    Each command must contain: CID (e.g. "0x03"), Name, and Fields.
+    Consumes parsed uplink MAC commands (output of handle_uplink_mac_command_by_cid)
+    and returns a downlink plan keyed by the response/request to send.
+    Each case calls a dedicated per-command builder function you will define.
 
-    Returns a list of strings describing required actions or none needed.
+    Expected builder signatures (you'll implement them):
+      - build_link_check_ans(fields: dict, index: int) -> Optional[dict]
+      - build_link_adr_req(fields: dict, retry: dict, index: int) -> Optional[dict]
+      - build_rx_param_setup_req(fields: dict, index: int) -> Optional[dict]
+      - build_new_channel_req(fields: dict, retry: dict, index: int) -> Optional[dict]
+      - build_dl_channel_req(fields: dict, retry: dict, index: int) -> Optional[dict]
+      - build_device_time_ans(fields: dict, index: int) -> Optional[dict]
+
+    Returned plan shape:
+      {
+        "LinkCheckAns": [ { ...job... }, ... ],
+        "LinkADRReq":   [ { ...job... }, ... ],
+        ...
+      }
+    Where each job is whatever your builder returns (e.g., {"Payload": "...", "Fields": {...}, ...})
     """
-    actions = []
+    plan: Dict[str, List[Dict[str, Any]]] = {}
 
-    for cmd in mac_command_list:
-        cid = cmd["CID"]
-        name = cmd["Name"]
-        fields = cmd.get("Fields", {})
+    def add(key: str, job: Optional[Dict[str, Any]]):
+        if job is not None:
+            plan.setdefault(key, []).append(job)
+
+    for cmd in parsed_mac_cmds:
+        cid    = cmd.get("CID")            # e.g., "0x03"
+        fields = cmd.get("Fields", {}) or {}
+        idx    = cmd.get("Index")
 
         match cid:
-            # 0x02 - LinkCheckReq (uplink)
+            # Uplink 0x02 LinkCheckReq → respond with LinkCheckAns
             case "0x02":
-                actions.append("📡 LinkCheckReq received → Send LinkCheckAns in next downlink.")
+                add("LinkCheckAns", build_link_check_ans(fields, idx))
 
-            # 0x03 - LinkADRAns (uplink)
+            # Uplink 0x03 LinkADRAns → only retry for bits that were 0 (rejected)
             case "0x03":
-                ch_ack = fields.get("ChMaskACK")
-                dr_ack = fields.get("DataRateACK")
-                tx_ack = fields.get("TxPowerACK")
+                retry = {}
+                if fields.get("ChMaskACK") is False:
+                    retry["ChMask"] = True
+                if fields.get("DataRateACK") is False:
+                    retry["DataRate"] = True
+                if fields.get("TxPowerACK") is False:
+                    retry["TxPower"] = True
+                if retry:
+                    add("LinkADRReq", build_link_adr_req(fields, retry, idx))
 
-                if all([ch_ack, dr_ack, tx_ack]):
-                    actions.append("✅ LinkADRAns: All settings accepted → No action needed.")
-                else:
-                    details = []
-                    if not ch_ack:
-                        details.append("❌ ChMask rejected")
-                    if not dr_ack:
-                        details.append("❌ DataRate rejected")
-                    if not tx_ack:
-                        details.append("❌ TxPower rejected")
-                    actions.append(f"⚠️ LinkADRAns: Some settings rejected ({', '.join(details)}) → Consider retrying LinkADRReq.")
+            # Uplink 0x04 DutyCycleAns → no mandatory response (skip)
 
-            # 0x04 - DutyCycleAns (uplink)
-            case "0x04":
-                actions.append("✅ DutyCycleAns: Device accepted duty cycle limits → No action needed.")
-
-            # 0x05 - RXParamSetupAns (uplink)
+            # Uplink 0x05 RXParamSetupAns → if ANY bit is 0, device kept old values; retry is policy-driven
             case "0x05":
-                freq_ack = fields.get("FreqACK")
-                rx2_ack = fields.get("RX2DRAck")
-                rx1_ack = fields.get("RX1OffsetACK")
+                rx1_ok = fields.get("RX1DROffsetACK") is True
+                rx2_ok = fields.get("RX2DRAck")       is True
+                ch_ok  = fields.get("ChannelACK")     is True
+                if not (rx1_ok and rx2_ok and ch_ok):
+                    add("RXParamSetupReq", build_rx_param_setup_req(fields, idx))
 
-                if all([freq_ack, rx2_ack, rx1_ack]):
-                    actions.append("✅ RXParamSetupAns: All parameters accepted.")
-                else:
-                    details = []
-                    if not freq_ack:
-                        details.append("❌ RX2 frequency rejected")
-                    if not rx2_ack:
-                        details.append("❌ RX2 data rate rejected")
-                    if not rx1_ack:
-                        details.append("❌ RX1 offset rejected")
-                    actions.append(f"⚠️ RXParamSetupAns: Some parameters rejected ({', '.join(details)}) → Consider resending RXParamSetupReq.")
+            # Uplink 0x06 DevStatusAns → no mandatory response (ADR policy may trigger later; skip here)
 
-            # 0x06 - DevStatusAns (uplink)
-            case "0x06":
-                battery = fields.get("BatteryLevel")
-                snr = fields.get("SNRMargin")
-                actions.append(f"🔋 DevStatusAns received → Battery: {battery}, SNR Margin: {snr} dB → Log or adapt ADR if needed.")
-
+            # Uplink 0x07 NewChannelAns → only retry for failed bits
             case "0x07":
-                freq_ack = fields.get("FrequencyACK")
-                dr_range_ack = fields.get("DRRangeACK")
+                retry = {}
+                if fields.get("FrequencyACK") is False:
+                    retry["Frequency"] = True
+                if fields.get("DRRangeACK") is False:
+                    retry["DRRange"] = True
+                if retry:
+                    add("NewChannelReq", build_new_channel_req(fields, retry, idx))
 
-                if freq_ack and dr_range_ack:
-                    actions.append("✅ NewChannelAns: Frequency and DR range accepted.")
-                else:
-                    reasons = []
-                    if not freq_ack:
-                        reasons.append("❌ Frequency rejected")
-                    if not dr_range_ack:
-                        reasons.append("❌ DR range rejected")
-                    actions.append(f"⚠️ NewChannelAns: Some settings rejected ({', '.join(reasons)}) → Consider resending NewChannelReq.")
+            # Uplink 0x08 RXTimingSetupAns → no mandatory response (skip)
 
-            # 0x08 - RXTimingSetupAns
-            case "0x08":
-                actions.append("✅ RXTimingSetupAns received → Device accepted new RX1 delay.")
+            # Uplink 0x09 TxParamSetupAns → no mandatory response (skip)
 
-            # 0x09 - TxParamSetupAns
-            case "0x09":
-                actions.append("✅ TxParamSetupAns received → Device accepted new TX power constraints.")
-
-            # 0x0A - DlChannelAns
+            # Uplink 0x0A DlChannelAns → only retry for failed bits
             case "0x0A":
-                freq_ack = fields.get("FreqACK")
-                ch_idx_ack = fields.get("ChannelIndexACK")
-                if freq_ack and ch_idx_ack:
-                    actions.append("✅ DlChannelAns: Downlink channel and index accepted.")
-                else:
-                    reasons = []
-                    if not freq_ack:
-                        reasons.append("❌ Frequency rejected")
-                    if not ch_idx_ack:
-                        reasons.append("❌ Channel index rejected")
-                    actions.append(f"⚠️ DlChannelAns: Some settings rejected ({', '.join(reasons)}) → Consider retrying DlChannelReq.")
+                retry = {}
+                if fields.get("FreqACK") is False:
+                    retry["DownlinkFrequency"] = True
+                if fields.get("ChannelIndexACK") is False:
+                    retry["ChannelIndex"] = True
+                if retry:
+                    add("DlChannelReq", build_dl_channel_req(fields, retry, idx))
 
+            # Uplink 0x0D DeviceTimeReq → respond with DeviceTimeAns
+            # (If your parser labeled it differently, still respond here based on CID)
+            case "0x0D":
+                add("DeviceTimeAns", build_device_time_ans(fields, idx))
+
+            # RFU / unhandled in 1.0.3 → skip, or add diagnostics if you want
             case _:
-                actions.append(f"❓ Unknown or unhandled MAC command: CID {cid} ({name})")        
+                pass
 
-    return actions
+    return plan

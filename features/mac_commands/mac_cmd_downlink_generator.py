@@ -3,7 +3,7 @@
 elif direction == 1:  # Downlink from gateway
         match cid:
             
-            case 0x82:  # LinkCheckAns
+            case 0x02:  # LinkCheckAns
                 if len(payload) == 2:
                     output["Fields"] = {
                         "Margin": payload[0],            # Link margin (0..254 dB)

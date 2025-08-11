@@ -18,6 +18,7 @@ def parse_lorawan_packet_by_type(mtype: int, Packet_data: bytes,mhdr, mhdr_byte:
         nwk_skey,app_skey=generate_session_keys(dev_eui)
         update_device_yaml_with_session_keys(dev_eui, nwk_skey, app_skey)
         print(join_accept_packet)
+
     elif mtype in [2, 4]:
         parsed_frame=handle_data_uplink(mtype, mhdr, mhdr_byte, mic, mac_payload)
         dev_addr=parsed_frame["DevAddr"]
