@@ -1,7 +1,7 @@
 import os
 import yaml
 from datetime import datetime
-
+from NS_shim.time_stamp import compute_rx_timestamps
 
 def initialize_device_yaml(dev_eui, app_eui, dev_nonce, output_dir="device_config"):
     """
@@ -356,3 +356,157 @@ def delete_device_yaml_file(dev_eui, output_dir="device_config"):
         print(f"⚠️ Device YAML file not found: {yaml_path}")
         return False
 
+def update_network_server_yaml_file(tmst: int, state_path: str = "config/network_server_device_config.yaml") -> None:
+    """
+    Stores gateway scheduling metadata at the network-server level.
+    - tmst: concentrator timestamp used for the *last scheduled downlink*.
+
+    File layout (config/network_server_state.yaml):
+      LastDownlinkTMST: <int>
+      TMSTHistory: [ ... ]          # optional rolling history (last 10)
+      LastUpdated: <ISO8601Z>
+    """
+    # Ensure parent dir exists
+    os.makedirs(os.path.dirname(state_path) or ".", exist_ok=True)
+
+    # Load existing state or initialize
+    if os.path.exists(state_path):
+        with open(state_path, "r", encoding="utf-8") as f:
+            state = yaml.safe_load(f) or {}
+    else:
+        state = {}
+
+    # Update fields
+    state["LastDownlinkTMST"] = int(tmst)
+    history = state.get("TMSTHistory", [])
+    history.append(int(tmst))
+    # Keep only the last 10 entries to avoid unbounded growth
+    state["TMSTHistory"] = history[-10:]
+    state["LastUpdated"] = datetime.utcnow().isoformat() + "Z"
+
+    # Write back
+    with open(state_path, "w", encoding="utf-8") as f:
+        yaml.safe_dump(state, f, sort_keys=False)
+
+    print(f"✅ Network server state updated at {state_path} (LastDownlinkTMST={tmst})")
+
+################################## STORE META DATA FROM JSON OBJECT ######################################
+
+def _parse_lora_datr(datr: str | None):
+    # "SF7BW125" -> (7, 125)
+    if not isinstance(datr, str): return None, None
+    s = datr.upper()
+    try:
+        if "SF" in s and "BW" in s:
+            sf = int(s.split("SF")[1].split("BW")[0])
+            bw = int(s.split("BW")[1])
+            return sf, bw
+    except Exception:
+        pass
+    return None, None
+
+def store_uplink_meta_from_push(dev_eui: str, push_data: dict, output_dir: str = "device_config") -> None:
+    """
+    Persist *all* useful rxpk fields + computed RX1/RX2 TMST to device_<DevEUI>.yaml.
+
+    YAML layout (under .Meta):
+      LastUplink:   full primary rxpk + parsed SF/BW + gateway_eui (if present)
+      RX1_TMST, RX2_TMST
+      UplinkHistory: last 20 snapshots (time, tmst, freq, datr, rssi, lsnr, chan, rfch, size, codr)
+      AllRxpk: last 5 full rxpk entries (verbatim)
+      LastSeenAt, LastUpdated
+    """
+    os.makedirs(output_dir, exist_ok=True)
+    yaml_path = os.path.join(output_dir, f"device_{dev_eui}.yaml")
+    if not os.path.exists(yaml_path):
+        raise FileNotFoundError(f"❌ Device YAML for {dev_eui} not found at {yaml_path}")
+
+    with open(yaml_path, "r", encoding="utf-8") as f:
+        dev = yaml.safe_load(f) or {}
+
+    dev.setdefault("Meta", {})
+    meta = dev["Meta"]
+
+    rxpks = push_data.get("rxpk") or push_data.get("RXPK") or []
+    if not isinstance(rxpks, list) or not rxpks:
+        # touch heartbeat only
+        meta["LastSeenAt"] = datetime.utcnow().isoformat() + "Z"
+        dev["LastUpdated"] = meta["LastSeenAt"]
+        with open(yaml_path, "w", encoding="utf-8") as f:
+            yaml.safe_dump(dev, f, sort_keys=False)
+        print(f"⚠️ No rxpk in PUSH_DATA for {dev_eui}.")
+        return
+
+    rx0 = dict(rxpks[0])  # canonical
+    sf, bw_khz = _parse_lora_datr(rx0.get("datr"))
+
+    # prefer DeviceSettings.RX1Delay, else top-level RxDelay, else 1s
+    rx1_delay = (
+        dev.get("DeviceSettings", {}).get("RX1Delay")
+        or dev.get("RxDelay")
+        or 1
+    )
+    try:
+        rx1_delay = int(rx1_delay)
+    except Exception:
+        rx1_delay = 1
+
+    # RX2 delay: if you store RX2 in YAML, prefer it; else default to RX1+1s
+    rx2_delay = dev.get("DeviceSettings", {}).get("RX2Delay")  # optional in your schema
+    if rx2_delay is not None:
+        try:
+            rx2_delay = int(rx2_delay)
+        except Exception:
+            rx2_delay = None  # fall back to RX1+1 below
+
+    # ✅ use your function
+    rx1_tmst, rx2_tmst = compute_rx_timestamps(
+        uplink_tmst=rx0.get("tmst"),
+        rx1_delay_s=rx1_delay,
+        rx2_delay_s=rx2_delay,
+    )
+
+    gw_eui = push_data.get("gateway_eui") or push_data.get("mac") or push_data.get("eui")
+
+    # Full LastUplink block
+    last_uplink = {
+        **rx0,
+        "SF": sf,
+        "BW_kHz": bw_khz,
+    }
+    if gw_eui:
+        last_uplink["gateway_eui"] = gw_eui
+
+    meta["LastUplink"] = last_uplink
+    meta["RX1_TMST"] = rx1_tmst
+    meta["RX2_TMST"] = rx2_tmst
+
+    # Rolling compact history (last 20)
+    hist = meta.get("UplinkHistory", [])
+    for r in rxpks:
+        hist.append({
+            "time": r.get("time"),
+            "tmst": r.get("tmst"),
+            "freq": r.get("freq"),
+            "chan": r.get("chan"),
+            "rfch": r.get("rfch"),
+            "rssi": r.get("rssi"),
+            "lsnr": r.get("lsnr"),
+            "datr": r.get("datr"),
+            "codr": r.get("codr"),
+            "size": r.get("size"),
+        })
+    meta["UplinkHistory"] = hist[-20:]
+
+    # Keep the last 5 full rxpk entries verbatim
+    all_rxpk = meta.get("AllRxpk", [])
+    all_rxpk.extend(rxpks)
+    meta["AllRxpk"] = all_rxpk[-5:]
+
+    meta["LastSeenAt"] = datetime.utcnow().isoformat() + "Z"
+    dev["LastUpdated"] = meta["LastSeenAt"]
+
+    with open(yaml_path, "w", encoding="utf-8") as f:
+        yaml.safe_dump(dev, f, sort_keys=False)
+
+    print(f"✅ Stored full PUSH_DATA metadata for {dev_eui} → {yaml_path}")

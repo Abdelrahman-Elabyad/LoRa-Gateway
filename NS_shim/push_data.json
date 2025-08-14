@@ -1,0 +1,20 @@
+{
+  "rxpk": [
+    {
+      "time": "2025-08-14T10:20:30.123456Z",
+      "tmst": 123456789,
+      "chan": 2,
+      "rfch": 0,
+      "freq": 868.300000,
+      "stat": 1,
+      "modu": "LORA",
+      "datr": "SF7BW125",
+      "codr": "4/5",
+      "lsnr": 7.5,
+      "rssi": -45,
+      "size": 23,
+      "data": "AIh3ZlVEMyIRCAcGBQQDAgESNPILhWc="
+    }
+  ]
+}
+

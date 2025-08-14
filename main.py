@@ -20,6 +20,7 @@ def main():
     print("Packet hex:", packet_bytes.hex().upper())
 
     # Only one required call:
+
     handle_uplink_packet(packet_bytes)
 
 if __name__ == "__main__":

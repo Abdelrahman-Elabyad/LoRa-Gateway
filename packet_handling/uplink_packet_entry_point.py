@@ -1,13 +1,17 @@
 from protocol_layers.mac_layer import parse_mac_layer
 from packet_handling.dispatch_by_mtype import parse_lorawan_packet_by_type  
+from NS_shim.uplink_gw_pkt__handler import lora_packet_extractor
 
-
-def handle_uplink_packet(Packet_data: bytes):
+def handle_uplink_packet(push_data_json):
     """
     Entry point: Parses any LoRaWAN uplink packet and returns a flat, structured dictionary.
     Handles JoinRequest and DataUp types via MType-specific routing.
     """
-    mac_result = parse_mac_layer(Packet_data)
+    #extract the data from the json object outputted from the concentrator
+    lorawan_packet_hex=lora_packet_extractor(push_data_json)
+    
+    #start the parsing of the lorawan packet 
+    mac_result = parse_mac_layer(lorawan_packet_hex)
 
     # Extract fields from MAC result
     mtype = mac_result["MHDR"]["MType"]
@@ -23,6 +27,6 @@ def handle_uplink_packet(Packet_data: bytes):
     ])
 
     # Delegate to MType-specific parser
-    return parse_lorawan_packet_by_type( mtype, Packet_data, mhdr, mhdr_byte, mic, mac_payload)
+    return parse_lorawan_packet_by_type( mtype, lorawan_packet_hex, mhdr, mhdr_byte, mic, mac_payload)
 
     

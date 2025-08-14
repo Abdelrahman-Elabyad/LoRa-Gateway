@@ -1,6 +1,6 @@
 #MAC commands 
 from features.mac_commands.mac_cmd_extraction import extract_mac_commands
-from features.mac_commands.mac_cmd_handler import handle_uplink_mac_command_by_cid
+from features.mac_commands.mac_cmd_handler import handle_and_dispatch_uplink_mac_command
 from features.security import decrypt_frm_payload
 from processing.device_registry import get_device_session_keys
 
@@ -23,7 +23,7 @@ def process_mac_commands(parsed_frame,dev_eui):
         if fopts_len > 0 and fport!=0:
             mac_commands = extract_mac_commands(fopts)
             #TODO: SUPPOSED TO AHVE THIS FUCNTION ALSO CALL THE RESPONSE FUCNTIONS THAT NEED TO GENRATE THE MAC RESPONSES
-            mac_response_fields=[handle_uplink_mac_command_by_cid(cmd, i, direction) for i, cmd in enumerate(mac_commands)]
+            mac_response_fields=[handle_and_dispatch_uplink_mac_command(cmd, i, direction) for i, cmd in enumerate(mac_commands)]
 
             return mac_response_fields
     #Mac commands are in the Frmpayload after decryption    
@@ -32,7 +32,7 @@ def process_mac_commands(parsed_frame,dev_eui):
             decrypted_frmpayload = decrypt_frm_payload(app_skey, nwk_skey, dev_addr, fcnt, direction, frmpayload, fport)
             mac_commands = extract_mac_commands(decrypted_frmpayload)
             #TODO: SUPPOSED TO AHVE THIS FUCNTION ALSO CALL THE RESPONSE FUCNTIONS THAT NEED TO GENRATE THE MAC RESPONSES
-            mac_response_fields=[handle_uplink_mac_command_by_cid(cmd, i,direction) for i, cmd in enumerate(mac_commands)]
+            mac_response_fields=[handle_and_dispatch_uplink_mac_command(cmd, i,direction) for i, cmd in enumerate(mac_commands)]
 
             return mac_response_fields
 
