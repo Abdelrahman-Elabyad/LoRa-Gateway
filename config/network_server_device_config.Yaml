@@ -1,11 +1,3 @@
-
-
-sample_packets:
-- description: OTAA Join Request (valid MIC, LSB format)
-  hex: 00887766554433221108070605040302011234F20B8567
-- description: Physical payload (MAC Layer only)
-  hex: 400403020100010148656C6C6FAABBCCDD
-
 devices_eui:
   0807060504030201:
     AppKey: 00112233445566778899AABBCCDDEEFF

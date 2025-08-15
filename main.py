@@ -1,27 +1,19 @@
-from packet_handling.uplink_packet_entry_point import handle_uplink_packet
 import yaml
 import os
-
+from NS_shim.server import start_server
 def main():
-    # Load the Join Request packet from YAML config
-    yaml_path = "config/network_server_device_config.Yaml"
-    if not os.path.exists(yaml_path):
-        raise FileNotFoundError(f"❌ YAML config not found at: {yaml_path}")
 
-    with open(yaml_path, "r", encoding="utf-8") as f:
-        config = yaml.safe_load(f)
+    with open("config/network_server_device_config.yaml","r",encoding="utf-8") as f:
+        _C = yaml.safe_load(f) or {}
+    for k in ("SERVER_IP","GATEWAY_IP","UDP_PORT","BUF_SIZE"):
+        if k not in _C: raise KeyError(f"Missing {k} in YAML")
+    SERVER_IP  = str(_C["SERVER_IP"])
+    GATEWAY_IP = str(_C["GATEWAY_IP"])
+    UDP_PORT   = int(_C["UDP_PORT"])
+    BUF_SIZE   = int(_C["BUF_SIZE"])
 
-    # Grab the first sample packet (assumed to be a Join Request)
-    packet_hex = config["sample_packets"][0]["hex"]
-    packet_bytes = bytes.fromhex(packet_hex)
-
-    print("✅ Using Join Request packet from YAML")
-    print("Packet length:", len(packet_bytes))
-    print("Packet hex:", packet_bytes.hex().upper())
-
-    # Only one required call:
-
-    handle_uplink_packet(packet_bytes)
+    start_server()
+    
 
 if __name__ == "__main__":
     main()
