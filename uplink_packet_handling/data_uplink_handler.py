@@ -1,6 +1,6 @@
 from protocol_layers.application_layer import parse_app_layer
 from features.security import compute_verify_mic
-from config.settings import NWK_SKEY
+from uplink_packet_handling.processing.device_registry import get_device_session_keys,get_dev_eui_from_dev_addr
 
 def handle_data_uplink(mtype: int, mhdr: dict, mhdr_byte: bytes, mic: bytes, mac_payload: bytes):
     """
@@ -11,8 +11,9 @@ def handle_data_uplink(mtype: int, mhdr: dict, mhdr_byte: bytes, mic: bytes, mac
     app_result = parse_app_layer(mac_payload)
     devaddr = app_result["FHDR"]["DevAddr"]
     counter = app_result["FHDR"]["FCnt"]
-
-    valid = compute_verify_mic(NWK_SKEY,devaddr,counter,0,mhdr_byte,mac_payload,mic)
+    dev_eui=get_dev_eui_from_dev_addr(devaddr)
+    nwk_skey,app_skey= get_device_session_keys(dev_eui)
+    valid = compute_verify_mic(nwk_skey,devaddr,counter,0,mhdr_byte,mac_payload,mic)
 
     if not valid:
         raise ValueError("❌ Invalid MIC in DataUp")

@@ -1,0 +1,6 @@
+{
+  "GATEWAY_IP": "192.168.1.50",
+  "SERVER_IP": "0.0.0.0",
+  "UDP_PORT": 1700,
+  "BUF_SIZE": 8192
+}

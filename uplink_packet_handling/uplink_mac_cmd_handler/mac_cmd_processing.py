@@ -1,6 +1,6 @@
 #MAC commands 
-from features.mac_commands.mac_cmd_extraction import extract_mac_commands
-from features.mac_commands.mac_cmd_handler import handle_and_dispatch_uplink_mac_command
+from mac_cmd_extraction import extract_mac_commands
+from mac_cmd_handler import handle_and_dispatch_uplink_mac_command
 from features.security import decrypt_frm_payload
 from processing.device_registry import get_device_session_keys
 

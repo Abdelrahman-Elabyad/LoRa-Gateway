@@ -1,23 +1,26 @@
 import json
 import base64
-"""
-This script loads a LoRaWAN uplink packet from a JSON file, extracts the Base64-encoded PHYPayload and timestamp,
-decodes the payload to bytes, and prints the Base64 string, raw bytes, and hexadecimal representation.
-Steps performed:
-1. Loads a JSON file named "push_data.json" containing LoRaWAN packet data.
-2. Extracts the Base64-encoded PHYPayload from the first 'rxpk' entry.
-"""
-def lora_packet_extractor():
-    # Load JSON file
-    with open("NS_shim/push_data.json", "r") as f:
-        push_data = json.load(f)
 
-    # Extract Base64 LoRaWAN packet
-    lora_pkt_base64 = push_data["rxpk"][0]["data"]
+def lora_packet_extractor(push_data_json: dict) -> bytes:
+    """
+    Accepts the JSON object you received over UDP and returns raw PHYPayload bytes.
+    Supports both:
+      - Semtech UDP format: {"rxpk":[{"data":"<base64>"}]}
+      - Your own shim:      {"type":"uplink","phy":"<base64>"}
+    """
+    if not isinstance(push_data_json, dict):
+        raise TypeError("push_data_json must be a dict")
 
-    # Decode Base64 to bytes
-    phy_bytes = base64.b64decode(lora_pkt_base64)
-    lora_pkt_hex = phy_bytes.hex().upper()
-    return lora_pkt_hex
+    # Case A: Semtech UDP JSON from packet forwarder (rxpk list)
+    if "rxpk" in push_data_json:
+        rxpk_list = push_data_json.get("rxpk") or []
+        if not rxpk_list:
+            raise ValueError("No rxpk entries found")
+        data_b64 = rxpk_list[0].get("data")
+        if not data_b64:
+            raise ValueError("rxpk[0].data is missing")
+        return base64.b64decode(data_b64)
+    
+    raise ValueError("Unsupported uplink JSON shape (expected 'rxpk' or {'type':'uplink','phy':...})")
 
 
