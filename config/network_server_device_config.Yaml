@@ -1,3 +1,4 @@
+# this file is supposed to be the database of device that teh server recongnizes
 devices_eui:
   0807060504030201:
     AppKey: 00112233445566778899AABBCCDDEEFF

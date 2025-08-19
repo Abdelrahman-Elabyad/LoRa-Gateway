@@ -510,3 +510,56 @@ def store_uplink_meta_from_push(dev_eui: str, push_data: dict, output_dir: str =
         yaml.safe_dump(dev, f, sort_keys=False)
 
     print(f"✅ Stored full PUSH_DATA metadata for {dev_eui} → {yaml_path}")
+
+def add_metadata_to_device_yaml(dev_eui: str, metadata: dict, output_dir="device_config"):
+    """
+    Overwrites the 'Metadata' section in the device YAML with the latest radio metadata.
+    Example metadata dict: {"tmst": 12345, "freq": 868100000, "dr": "SF7BW125", "rssi": -45, "snr": 5.5}
+    """
+    yaml_path = os.path.join(output_dir, f"device_{dev_eui}.yaml")
+
+    if not os.path.exists(yaml_path):
+        raise FileNotFoundError(f"❌ Device YAML for {dev_eui} not found at {yaml_path}")
+
+    with open(yaml_path, "r") as f:
+        device_data = yaml.safe_load(f) or {}
+
+    # Always overwrite with latest metadata
+    device_data["Metadata"] = metadata
+
+    with open(yaml_path, "w") as f:
+        yaml.dump(device_data, f, sort_keys=False)
+
+    print(f"✅ Updated metadata for {dev_eui}: {yaml_path}")
+
+#later when the ADR is setup we can also add teh datar in teh meta data under downlink so taht we can update it in teh packet entry point
+def get_meta_data_from_device_yaml(meta_data: dict):
+    """
+    Unpacks radio metadata dictionary into individual variables.
+
+    Expected keys in `meta_data`:
+      - tmst, freq, rfch, powe, modu, datr, codr, ipol
+    Also reads DLSettings if available:
+      - DLSettings.RX1Delay, DLSettings.RX2DataRate, DLSettings.RX2Freq
+
+    Returns:
+      (tmst, freq, rfch, powe, modu, datr, codr, ipol, rx1_delay, rx2_datr, rx2_freq)
+    """
+    if not isinstance(meta_data, dict):
+        raise TypeError("meta_data must be a dict")
+
+    tmst = meta_data.get("tmst")
+    freq = meta_data.get("freq")
+    rfch = meta_data.get("rfch")
+    powe = meta_data.get("powe")   # optional
+    modu = meta_data.get("modu")
+    datr = meta_data.get("datr")
+    codr = meta_data.get("codr")
+    ipol = meta_data.get("ipol")
+
+    dl_settings = meta_data.get("DLSettings", {})
+    rx1_tmst = dl_settings.get("rx1_tmst")
+    rx2_tmst = dl_settings.get("rx2_tmst")
+
+    return tmst, freq, rfch, powe, modu, datr, codr, ipol, rx1_tmst, rx2_tmst
+
