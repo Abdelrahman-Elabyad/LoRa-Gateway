@@ -34,11 +34,11 @@ def downlink_wrap_pkt_into_json (lorawan_pkt_bytes,tmst: int,freq: int,rfch: int
         "tmst": tmst,
         "freq": freq,
         "rfch": rfch,
-        "powe": powe,
+        "powe": powe if powe is not None else 14,
         "modu": modu,
         "datr": datr,
         "codr": codr,
-        "ipol": ipol,
+        "ipol": ipol if ipol is not None else True,
         "size": len(lorawan_pkt_bytes)
     }
 

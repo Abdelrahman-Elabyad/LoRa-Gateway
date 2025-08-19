@@ -1,8 +1,8 @@
 #MAC commands 
-from mac_cmd_extraction import extract_mac_commands
-from mac_cmd_handler import handle_and_dispatch_uplink_mac_command
+from uplink_packet_handling.uplink_mac_cmd_handler.mac_cmd_extraction import extract_mac_commands
+from uplink_packet_handling.uplink_mac_cmd_handler.mac_cmd_handler import handle_and_dispatch_uplink_mac_command
 from features.security import decrypt_frm_payload
-from processing.device_registry import get_device_session_keys
+from uplink_packet_handling.processing.device_registry import get_device_session_keys
 
 def process_mac_commands(parsed_frame,dev_eui):
     """

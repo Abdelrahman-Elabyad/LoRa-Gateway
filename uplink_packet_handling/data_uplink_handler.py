@@ -1,4 +1,4 @@
-from protocol_layers.application_layer import parse_app_layer
+from uplink_packet_handling.protocol_layers.application_layer import parse_app_layer
 from features.security import compute_verify_mic
 from uplink_packet_handling.processing.device_registry import get_device_session_keys,get_dev_eui_from_dev_addr
 

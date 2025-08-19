@@ -1,0 +1,58 @@
+DevEUI: 0807060504030201
+AppEUI: '8877665544332211'
+DevNonces:
+- '1234'
+JoinStatus: Accepted
+DevAddr: E7440324
+AppSKey: E1D22FBF2D490D2CEC61153A4FD97C97
+NwkSKey: 2DF0C5DF144097350DC523386A4CD572
+FCntUp: 0
+FCntDown: 0
+DeviceSettings:
+  DataRate: null
+  TxPower: null
+  Channels: []
+  RX1Delay: null
+  RX2DataRate: null
+  RX2Freq: null
+  DutyCycle: null
+MACCommands: {}
+Features: {}
+LastUpdated: '2025-08-19T13:36:20.595126Z'
+Metadata:
+  tmst: 123456789
+  freq: 868.3
+  chan: 2
+  rfch: 0
+  stat: 1
+  modu: LORA
+  datr: SF7BW125
+  codr: 4/5
+  rssi: -45
+  lsnr: 7.5
+  size: 23
+  recv_clock: 352411.3862806
+  DLSettings:
+    rx1_tmst: 124456789
+    rx2_tmst: 125456789
+AppNonce: '5865686'
+NetID: '120000'
+DLSettings: 0
+RxDelay: 1
+CFList:
+- '18'
+- 4F
+- '84'
+- E8
+- '56'
+- '84'
+- B8
+- 5E
+- '84'
+- '88'
+- '66'
+- '84'
+- '58'
+- 6E
+- '84'
+- '00'

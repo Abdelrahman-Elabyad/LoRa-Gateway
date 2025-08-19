@@ -29,32 +29,37 @@ def choose_window_by_latency(
     # If we can still comfortably hit RX1, use it; otherwise RX2.
     return "RX1" if elapsed_s <= (rx1_delay_s - safety_margin_ms / 1000.0) else "RX2"
 
-def decide_receive_window(uplink_rx_time: float, rx1_tmst: int, rx2_tmst: int) -> int:
+def decide_receive_window(NS_tmst: float, rx1_tmst: int, rx2_tmst: int, tx_time_us: int = 100_000) -> int:
     """
-    Determines which RX window is active based on time elapsed since uplink reception.
+    Determines if RX1 can be used based on elapsed time and TX duration.
+    Falls back to RX2 if not enough time remains to complete TX in RX1 window.
 
     Args:
-        uplink_rx_time (float): The system clock (time.perf_counter()) at which uplink was received.
-        rx1_tmst (int): TMST value scheduled for RX1.
-        rx2_tmst (int): TMST value scheduled for RX2.
+        NS_tmst (float): time.perf_counter() at uplink arrival
+        rx1_tmst (int): Scheduled RX1 timestamp (µs)
+        rx2_tmst (int): Scheduled RX2 timestamp (µs)
+        tx_time_us (int): Estimated airtime of downlink packet in µs (default: 100_000)
 
     Returns:
-        int: The TMST of the window that is active now. Choose RX1 if still in RX1 window, else RX2.
+        int: Chosen TMST (rx1_tmst or rx2_tmst)
     """
     if rx1_tmst is None or rx2_tmst is None:
-        raise ValueError("Missing RX1/RX2 tmst values")
+        raise ValueError("RX1 and RX2 TMST must not be None")
 
-    TMST_TICKS_PER_SEC = 1_000_000  # TMST is in microseconds
+    TMST_TICKS_PER_SEC = 1_000_000
 
-    # How many microseconds since the uplink arrived?
-    elapsed_us = int((time.perf_counter() - uplink_rx_time) * TMST_TICKS_PER_SEC)
+    # Elapsed time in microseconds
+    elapsed_us = int((time.perf_counter() - NS_tmst) * TMST_TICKS_PER_SEC)
 
-    # Assume uplink TMST was t0, so now = t0 + elapsed_us
-    current_tmst = (rx1_tmst - 1_000_000) + elapsed_us
+    # Uplink TMST ≈ rx1_tmst - 1 sec
+    uplink_tmst = rx1_tmst - TMST_TICKS_PER_SEC
+    current_tmst = uplink_tmst + elapsed_us
 
-    # Choose RX1 if still before RX2
-    if current_tmst < rx2_tmst:
+    # Ensure there's enough room to finish TX before RX2 starts
+    if current_tmst + tx_time_us < rx2_tmst:
         return rx1_tmst
     else:
         return rx2_tmst
+
+
 

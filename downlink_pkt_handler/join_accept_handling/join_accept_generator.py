@@ -1,7 +1,7 @@
 from construct import Byte, Int32ub, Struct, Int24ub, Bytes,BitStruct, BitsInteger
 from features.security import encrypt_join_accept_payload, generate_join_accept_mic
-from processing.device_registry import get_app_key, update_device_yaml_with_join_parameters, get_network_ids, store_devaddr_to_deveui_mapping
-from join_accept_handling.Intialize_join_request_param import *
+from uplink_packet_handling.processing.device_registry import get_app_key, update_device_yaml_with_join_parameters, get_network_ids, store_devaddr_to_deveui_mapping
+from downlink_pkt_handler.join_accept_handling.Intialize_join_request_param import *
 
 #Join accept structure
 #PHYPayload = MHDR | Encrypted(MACPayload) | MIC

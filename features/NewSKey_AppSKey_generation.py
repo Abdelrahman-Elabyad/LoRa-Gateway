@@ -1,5 +1,5 @@
 from Crypto.Cipher import AES
-from processing.device_registry import get_app_key, get_appnonce_netid_devnonce
+from uplink_packet_handling.processing.device_registry import get_app_key, get_appnonce_netid_devnonce
 
 #need to genrate NEWSKEY AND APPSKEY
 #Need to sotre them in teh device yaml file so they can be extracted accordign to teh deviec ADdress

@@ -1,5 +1,6 @@
-from protocol_layers.mac_layer import parse_mac_layer
-from dispatch_by_mtype import parse_lorawan_packet_by_type  
+import time
+from uplink_packet_handling.protocol_layers.mac_layer import parse_mac_layer
+from uplink_packet_handling.dispatch_by_mtype import parse_lorawan_packet_by_type  
 from NS_shim.uplink_gw_pkt__handler import lora_packet_extractor, extract_metadata_from_uplink
 from NS_shim.time_stamp import compute_rx_tmsts
 
@@ -14,7 +15,7 @@ def handle_uplink_packet(push_data_json: dict):
     # 1) Extract raw bytes + metadata from the concentrator JSON
     lorawan_packet_bytes = lora_packet_extractor(push_data_json)
     meta_data = extract_metadata_from_uplink(push_data_json)  # should include 'tmst' (uplink)
-
+    meta_data["recv_clock"] = time.perf_counter()
     # 2) Pre-compute RX1/RX2 tmst (no choice here)
     uplink_tmst = meta_data.get("tmst")
     if uplink_tmst is not None:
@@ -43,9 +44,10 @@ def handle_uplink_packet(push_data_json: dict):
     mac_payload = mac_result["MACPayload"]
     mic = mac_result["MIC"]
 
-    result_summary, downlink_json = parse_lorawan_packet_by_type(mtype,lorawan_packet_bytes,mhdr,mhdr_byte,mac_payload,mic,meta_data)
+    parse_lorawan_packet_by_type(mtype,lorawan_packet_bytes,mhdr,mhdr_byte,mac_payload,mic,meta_data)
+    #result_summary, downlink_json = parse_lorawan_packet_by_type(mtype,lorawan_packet_bytes,mhdr,mhdr_byte,mac_payload,mic,meta_data)
 
-    return result_summary, downlink_json
+    #return result_summary, downlink_json
 
 
     
