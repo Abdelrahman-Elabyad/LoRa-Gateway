@@ -20,12 +20,13 @@ def parse_lorawan_packet_by_type(mtype: int, Packet_data: bytes,mhdr, mhdr_byte:
         join_accept_packet=generate_join_accept_fullframe(dev_eui)
         nwk_skey,app_skey=generate_session_keys(dev_eui)
         update_device_yaml_with_session_keys(dev_eui, nwk_skey, app_skey)
-        tmst, freq, rfch, powe, modu, datr, codr, ipol, NS_tmst, rx1_tmst, rx2_tmst=get_meta_data_from_device_yaml(meta_data)
+        freq, rfch, powe,modu, datr, codr, ipol, NS_tmst, rx1_tmst, rx2_tmst = get_meta_data_from_device_yaml(meta_data)
         NS_tmst=meta_data["recv_clock"]
         dl_tmst=decide_receive_window(NS_tmst, rx1_tmst, rx2_tmst,)
-        downlink_json= downlink_wrap_pkt_into_json (join_accept_packet,dl_tmst,freq,rfch,powe,modu,datr,codr,ipol)
+        downlink_json = downlink_wrap_pkt_into_json(join_accept_packet,freq,rfch,powe,modu,datr,codr,ipol,dl_tmst)
         print(downlink_json)
-        #result_summary  = {"Type": "JoinRequest", "DevEUI": dev_eui}
+        #return downlink_json
+        
 
     elif mtype in [2, 4]:
         parsed_frame=handle_data_uplink(mtype, mhdr, mhdr_byte, mic, mac_payload)

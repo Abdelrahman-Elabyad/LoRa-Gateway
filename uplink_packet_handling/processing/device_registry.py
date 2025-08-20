@@ -441,18 +441,19 @@ def get_meta_data_from_device_yaml(meta_data: dict):
     if not isinstance(meta_data, dict):
         raise TypeError("meta_data must be a dict")
 
-    tmst = meta_data.get("tmst")
     freq = meta_data.get("freq")
     rfch = meta_data.get("rfch")
-    powe = meta_data.get("powe")   # optional
+    powe = meta_data.get("powe")
     modu = meta_data.get("modu")
     datr = meta_data.get("datr")
     codr = meta_data.get("codr")
     ipol = meta_data.get("ipol")
     NS_tmst = meta_data.get("recv_clock")
+
     dl_settings = meta_data.get("DLSettings", {})
     rx1_tmst = dl_settings.get("rx1_tmst")
     rx2_tmst = dl_settings.get("rx2_tmst")
 
-    return tmst, freq, rfch, powe, modu, datr, codr, ipol, NS_tmst, rx1_tmst, rx2_tmst
+    return (freq, rfch, powe,
+            modu, datr, codr, ipol, NS_tmst, rx1_tmst, rx2_tmst)
 

@@ -45,9 +45,9 @@ def handle_uplink_packet(push_data_json: dict):
     mic = mac_result["MIC"]
 
     parse_lorawan_packet_by_type(mtype,lorawan_packet_bytes,mhdr,mhdr_byte,mac_payload,mic,meta_data)
-    #result_summary, downlink_json = parse_lorawan_packet_by_type(mtype,lorawan_packet_bytes,mhdr,mhdr_byte,mac_payload,mic,meta_data)
-
-    #return result_summary, downlink_json
+    #downlink_json=parse_lorawan_packet_by_type(mtype,lorawan_packet_bytes,mhdr,mhdr_byte,mac_payload,mic,meta_data)
+    
+    #return downlink_json
 
 
     

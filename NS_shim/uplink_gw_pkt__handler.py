@@ -31,18 +31,21 @@ def extract_metadata_from_uplink(push_data_json: dict) -> dict:
     if "rxpk" in push_data_json:
         rxpk = push_data_json["rxpk"][0]
         metadata = {
-            "tmst": rxpk.get("tmst"),
-            "freq": rxpk.get("freq"),
-            "chan": rxpk.get("chan"),
-            "rfch": rxpk.get("rfch"),
-            "stat": rxpk.get("stat"),
-            "modu": rxpk.get("modu"),
-            "datr": rxpk.get("datr"),
-            "codr": rxpk.get("codr"),
-            "rssi": rxpk.get("rssi"),
-            "lsnr": rxpk.get("lsnr"),
-            "size": rxpk.get("size")
+        "time": rxpk.get("time"),     # UTC time of RX in ISO format
+        "tmst": rxpk.get("tmst"),
+        "chan": rxpk.get("chan"),
+        "rfch": rxpk.get("rfch"),
+        "freq": rxpk.get("freq"),
+        "stat": rxpk.get("stat"),
+        "modu": rxpk.get("modu"),
+        "datr": rxpk.get("datr"),
+        "codr": rxpk.get("codr"),
+        "rssi": rxpk.get("rssi"),
+        "lsnr": rxpk.get("lsnr"),
+        "size": rxpk.get("size"),
+        "data": rxpk.get("data")      # Base64 payload (PHYPayload)
         }
+
         return metadata
     elif push_data_json.get("type") == "uplink":
         # if you extend your shim format later, adapt here

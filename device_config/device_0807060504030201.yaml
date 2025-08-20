@@ -4,8 +4,8 @@ DevNonces:
 - '1234'
 JoinStatus: Accepted
 DevAddr: E7440324
-AppSKey: E1D22FBF2D490D2CEC61153A4FD97C97
-NwkSKey: 2DF0C5DF144097350DC523386A4CD572
+AppSKey: D2A3C8CAEAFFABBCB2AE21ED6C3EB122
+NwkSKey: 091E7AB8E0E1D659A13FB2A909A85A67
 FCntUp: 0
 FCntDown: 0
 DeviceSettings:
@@ -18,12 +18,13 @@ DeviceSettings:
   DutyCycle: null
 MACCommands: {}
 Features: {}
-LastUpdated: '2025-08-19T13:36:20.595126Z'
+LastUpdated: '2025-08-20T13:11:26.300667Z'
 Metadata:
+  time: '2025-08-14T10:20:30.123456Z'
   tmst: 123456789
-  freq: 868.3
   chan: 2
   rfch: 0
+  freq: 868.3
   stat: 1
   modu: LORA
   datr: SF7BW125
@@ -31,11 +32,12 @@ Metadata:
   rssi: -45
   lsnr: 7.5
   size: 23
-  recv_clock: 352411.3862806
+  data: AIh3ZlVEMyIRCAcGBQQDAgESNPILhWc=
+  recv_clock: 11698.5985978
   DLSettings:
     rx1_tmst: 124456789
     rx2_tmst: 125456789
-AppNonce: '5865686'
+AppNonce: '10623433'
 NetID: '120000'
 DLSettings: 0
 RxDelay: 1

@@ -2,7 +2,7 @@ import os
 import json
 import base64
 import socket
-from typing import Optional, Callable, Dict, Any
+from typing import  Dict, Any
 from uplink_packet_handling.uplink_packet_entry_point import handle_uplink_packet
 
 
@@ -39,25 +39,62 @@ def start_server() -> None:
 
 def receive_uplink(sock: socket.socket) -> None:
     try:
-        data, addr = sock.recvfrom(CFG["BUF_SIZE"])
+        data, addr = sock.recvfrom(CFG['BUF_SIZE'])  # buffer size
+        if len(data) < 4:
+            print("[NS] Packet too short!")
+            return
+
+        protocol_version = data[0]
+        rand_token = data[1:3]
+        pkt_type = data[3]
+        mac = data[4:12]
+
+        # Debug print
+        print(f"[NS] Received type=0x{pkt_type:02X} from {addr}, protocol_version={protocol_version}, rand_token={rand_token.hex()}, MAC={mac.hex()}")
+        dispatch_using_pkt_type(pkt_type,sock,data,rand_token,addr)
+
     except Exception as e:
-        print("[NS] recv error:", e); return
+        print("[NS] Receive error:", e)
 
-    # This is your incoming JSON object from the UDP forwarder/shim
-    try:
-        msg = json.loads(data.decode())
-    except Exception as e:
-        print("[NS] Bad JSON:", e); return
+def dispatch_using_pkt_type(pkt_type,sock,data,rand_token,addr):
+    if pkt_type == 0x00:  # Recieved PUSH_DATA
+        try:
+            json_str = data[12:].decode('utf-8')
+            msg = json.loads(json_str)
+            print("[NS] Valid PUSH_DATA with JSON:", msg)
 
-    # Give the ENTIRE object to the pipeline:
-    try:
-        downlink_json = handle_uplink_packet(msg)  # returns a dict or None
-    except Exception as e:
-        print("[NS] Processing error:", e); return
+            # 🔁 Process JSON (e.g., parse LoRaWAN uplink)
+            try:
+                downlink_json = handle_uplink_packet(msg)
+                if downlink_json:
+                    send_downlink(sock, downlink_json)
+            except Exception as e:
+                print("[NS] Uplink handler error:", e)
 
-    if downlink_json:
-        send_downlink(sock, downlink_json)
+            # 🔁 Send PUSH_ACK
+            push_ack = bytearray()
+            push_ack.append(0x01)           # protocol protocol_version
+            push_ack.extend(rand_token)          # same rand_token
+            push_ack.append(0x01)           # PUSH_ACK
+            sock.sendto(push_ack, addr)
+            print("[NS] Sent PUSH_ACK")
 
+        except Exception as e:
+            print("[NS] PUSH_DATA invalid JSON:", e)
+
+    elif pkt_type == 0x02:  # Recieved PULL_DATA
+        pull_ack = bytearray()
+        pull_ack.append(0x01)           # protocol protocol_version
+        pull_ack.extend(rand_token)          # same rand_token
+        pull_ack.append(0x04)           # PULL_ACK
+        sock.sendto(pull_ack, addr)
+        print("[NS] Sent PULL_ACK")
+
+    elif pkt_type == 0x05:  # TX_ACK from gateway
+        print("[NS] Received TX_ACK:", data[12:].decode("utf-8", errors="ignore"))
+
+    else:
+        print(f"[NS] Unknown packet type: 0x{pkt_type:02X}")
 
 def send_downlink(sock: socket.socket, down_json: Dict[str, Any]) -> None:
     """Send a JSON downlink to the gateway."""
