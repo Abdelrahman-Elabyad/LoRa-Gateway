@@ -7,15 +7,7 @@ from cryptography.hazmat.primitives.ciphers import algorithms
 
 #You calculate AES-CMAC over B0 + msg(MHDR | MACPayload)
 #Then take the first 4 bytes as your MIC
-def compute_verify_mic(nwkskey: bytes, devaddr: bytes, fcnt: int, direction: int, MHDR: bytes, MacPayload: bytes,MIC) -> bytes:
-    """
-    Computes the 4-byte MIC for a LoRaWAN message.
-    :param nwkskey: 16-byte network session key (bytes)
-    :param devaddr: 4-byte DevAddr in little-endian (bytes)
-    :param fcnt: 2-byte or 4-byte FCnt (int)
-    :param direction: 0 for uplink, 1 for downlink
-    :param payload: Full MHDR + MACPayload (bytes)
-    """
+def generate_mic(nwkskey: bytes, devaddr: bytes, fcnt: int, direction: int, MHDR: bytes, MacPayload: bytes) -> bytes:
     #Intialiaze CMAC with AES algorithm
     cmac = CMAC(algorithms.AES(nwkskey))
 
@@ -27,19 +19,21 @@ def compute_verify_mic(nwkskey: bytes, devaddr: bytes, fcnt: int, direction: int
     B0 = bytes([
         0x49,                         # Fixed value for LoRaWAN MIC
         0x00, 0x00, 0x00, 0x00,       # Reserved
-        direction & 0x01,            # 0 = uplink, 1 = downlink
-        *devaddr_bytes,                    # DevAddr (little-endian)
-        *fcnt_bytes,                 # FCnt (padded to 4 bytes little-endian)
-        0x00,                        # Reserved (always 0)
-        len(MHDR) + len(MacPayload)  # Total length of MHDR + MACPayload
+        direction & 0x01,             # 0 = uplink, 1 = downlink
+        *devaddr_bytes,               # DevAddr (little-endian)
+        *fcnt_bytes,                  # FCnt (padded to 4 bytes little-endian)
+        0x00,                         # Reserved (always 0)
+        len(MHDR) + len(MacPayload)   # Total length of MHDR + MACPayload
     ])
 
     cmac.update(B0 + MHDR + MacPayload)
-    calculated_cmac = cmac.finalize()  
+    return cmac.finalize()[:4]
 
+def compute_verify_mic(nwkskey: bytes, devaddr: bytes, fcnt: int, direction: int, MHDR: bytes, MacPayload: bytes, MIC) -> bool:
+    mic_generated = generate_mic(nwkskey, devaddr, fcnt, direction, MHDR, MacPayload)
     MIC_HEX = MIC.hex().upper() if isinstance(MIC, bytes) else MIC
     print("MIC from packet:", MIC_HEX)
-    calculated_mic = calculated_cmac[:4].hex().upper()
+    calculated_mic = mic_generated.hex().upper()
     print("Calculated MIC:", calculated_mic)
     return calculated_mic == MIC_HEX
 

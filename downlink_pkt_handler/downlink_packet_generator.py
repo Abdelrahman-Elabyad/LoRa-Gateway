@@ -1,6 +1,9 @@
 import struct
 from construct import Struct, Byte, Int8ul, Int16ul, Int32ul, GreedyBytes, BitStruct, BitsInteger, Bytes, this
-from features.security import calculate_mic, encrypt_payload
+from features.security import generate_mic, encrypt_payload
+from features.NewSKey_AppSKey_generation import get_session_keys
+from uplink_packet_handling.processing.device_registry import get_dev_addr_from_dev_eui, get_and_increment_fcnt_downlink
+from uplink_packet_handling.processing.device_registry import get_device_session_keys
 
 #the fctrl_dict is a dictionary with the keys ADR, ADRACKReq, ACK, ClassB
 #TODO:need to add a fucntin that genrates the fctrl dict based on the mac cmds to be sent
@@ -46,7 +49,9 @@ def fhdr_builder(dev_addr, fctrl_dict, fcnt, fopts_bytes):
     })
 
     return fhdr
+
 def mac_payload_builder(dev_addr,fctrl_dict,fcnt,fopts_bytes,fport,frmpayload):
+    # Build FHDR
     fhdr=fhdr_builder(dev_addr, fctrl_dict, fcnt, fopts_bytes)
     # Define the MACPayload structure
     LoRaWANMACPayload = Struct(
@@ -63,6 +68,8 @@ def mac_payload_builder(dev_addr,fctrl_dict,fcnt,fopts_bytes,fport,frmpayload):
     })
 
     return mac_payload 
+
+#TODO: need to know how do i get the values for rfu and major
 def mhdr_builder(mtype, rfu=0, major=0):
     # Define the MHDR structure
     MHDR = BitStruct(
@@ -80,8 +87,38 @@ def mhdr_builder(mtype, rfu=0, major=0):
 
     return mhdr
 
+#TODO:need to make a fucnitn that makes the mac_cmd_downlink based on the mac cmds to be sent:either schedualed or responses
 
+def downlink_pkt_build(mtype,mac_cmd_downlink,dev_eui,dev_addr):
+    
+    # Retrieve session keys 
+    nwk_skey, app_skey = get_device_session_keys(dev_eui)
+    
+    # Get and increment the downlink frame counter
+    #TODO: need to create the get_and_increment_fcnt_downlink function
+    fcnt_down = get_and_increment_fcnt_downlink(dev_eui)
 
+    # Build FOpts from MAC command responses
+    fopts_bytes = b''.join(mac_cmd_downlink) if mac_cmd_downlink else b''
 
+    # TODO: CALL THE FCtrl dictionary FUCNTION HERE TO GET THE VALUES BASED ON THE MAC CMDS
+    fctrl_dict = create_fctrl_dict_based_on_mac_cmds(mac_cmd_downlink)
+    # Example FRMPayload (empty for MAC commands only)
+    frmpayload = b''
 
-def downlink_pkt_build(mtype,mac_cmd_responses,dev_eui):
+    # Build MACPayload
+    mac_payload = mac_payload_builder(dev_addr, fctrl_dict, fcnt_down, fopts_bytes, fport=0 if frmpayload == b'' else 1, frmpayload=frmpayload)
+
+    # Build MHDR
+    mhdr = mhdr_builder(mtype)
+
+    # Combine MHDR and MACPayload to form the PHY payload
+    phy_payload = mhdr + mac_payload
+
+    # Calculate MIC
+    mic = generate_mic(nwk_skey, phy_payload, dev_addr, fcnt_down, direction=1)  # direction=1 for downlink
+
+    # Final PHY payload with MIC
+    final_phy_payload = phy_payload + mic
+
+    return final_phy_payload
