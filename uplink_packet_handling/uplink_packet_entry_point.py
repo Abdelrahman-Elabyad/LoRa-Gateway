@@ -44,10 +44,10 @@ def handle_uplink_packet(push_data_json: dict):
     mac_payload = mac_result["MACPayload"]
     mic = mac_result["MIC"]
 
-    parse_lorawan_packet_by_type(mtype,lorawan_packet_bytes,mhdr,mhdr_byte,mac_payload,mic,meta_data)
-    #downlink_json=parse_lorawan_packet_by_type(mtype,lorawan_packet_bytes,mhdr,mhdr_byte,mac_payload,mic,meta_data)
+    #parse_lorawan_packet_by_type(mtype,lorawan_packet_bytes,mhdr,mhdr_byte,mac_payload,mic,meta_data)
+    downlink_json=parse_lorawan_packet_by_type(mtype,lorawan_packet_bytes,mhdr,mhdr_byte,mac_payload,mic,meta_data)
     
-    #return downlink_json
+    return downlink_json
 
 
     

@@ -25,21 +25,20 @@ def parse_lorawan_packet_by_type(mtype: int, Packet_data: bytes,mhdr, mhdr_byte:
         dl_tmst=decide_receive_window(NS_tmst, rx1_tmst, rx2_tmst,)
         downlink_json = downlink_wrap_pkt_into_json(join_accept_packet,freq,rfch,powe,modu,datr,codr,ipol,dl_tmst)
         print(downlink_json)
-        #return downlink_json
+        return downlink_json
         
 
     elif mtype in [2, 4]:
         parsed_frame=handle_data_uplink(mtype, mhdr, mhdr_byte, mic, mac_payload)
         dev_addr=parsed_frame["DevAddr"]
+        add_metadata_to_device_yaml(dev_eui,meta_data)
         dev_eui= get_dev_eui_from_dev_addr(dev_addr)
         mac_cmd_dict=process_mac_commands(parsed_frame,dev_eui)
         settings_dict=build_downlink_plan_from_uplink(mac_cmd_dict)
-        ####
-        #tmst=fetch_pkt_timestamp()
-        #update_network_server_yaml_file(tmst)
-        #rx1_tmst,rx2_tmst=compute_rx_timestamps()
-        #update_device_yaml_file_with_meta_data(dev_eui,rx1_tmst, rx2_tmst)
-        ####
+        freq, rfch, powe,modu, datr, codr, ipol, NS_tmst, rx1_tmst, rx2_tmst = get_meta_data_from_device_yaml(meta_data)
+        NS_tmst=meta_data["recv_clock"]
+        dl_tmst=decide_receive_window(NS_tmst, rx1_tmst, rx2_tmst,)
+        downlink_json = downlink_wrap_pkt_into_json(final_downlink_pkt_base64,freq,rfch,powe,modu,datr,codr,ipol,dl_tmst)
         update_device_yaml_settings_from_mac_cmds(dev_eui, settings_dict)
         #confirmed_data_up_packet need to send an acknowledgment
 

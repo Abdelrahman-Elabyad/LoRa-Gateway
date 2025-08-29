@@ -73,9 +73,9 @@ def dispatch_using_pkt_type(pkt_type,sock,data,rand_token,addr):
 
             # 🔁 Send PUSH_ACK
             push_ack = bytearray()
-            push_ack.append(0x01)           # protocol protocol_version
-            push_ack.extend(rand_token)          # same rand_token
-            push_ack.append(0x01)           # PUSH_ACK
+            push_ack.append(0x01)               # protocol protocol_version
+            push_ack.extend(rand_token)         # same rand_token
+            push_ack.append(0x01)               # PUSH_ACK
             sock.sendto(push_ack, addr)
             print("[NS] Sent PUSH_ACK")
 
