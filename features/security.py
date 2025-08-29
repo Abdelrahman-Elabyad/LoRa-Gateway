@@ -43,6 +43,7 @@ def compute_verify_mic(nwkskey: bytes, devaddr: bytes, fcnt: int, direction: int
     print("Calculated MIC:", calculated_mic)
     return calculated_mic == MIC_HEX
 
+
 #MIC for Join Request is calculated using a different method
 #It uses the APP_KEY and Join Request payload to calculate the MIC
 #NO B0 Block is used here
