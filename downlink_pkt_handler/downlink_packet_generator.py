@@ -1,124 +1,122 @@
 import struct
-from construct import Struct, Byte, Int8ul, Int16ul, Int32ul, GreedyBytes, BitStruct, BitsInteger, Bytes, this
-from features.security import generate_mic, encrypt_payload
-from features.NewSKey_AppSKey_generation import get_session_keys
-from uplink_packet_handling.processing.device_registry import get_dev_addr_from_dev_eui, get_and_increment_fcnt_downlink
-from uplink_packet_handling.processing.device_registry import get_device_session_keys
+from construct import BitStruct, BitsInteger
+from features.security import generate_mic, encrypt_frm_payload
+from uplink_packet_handling.processing.device_registry import get_and_increment_fcnt_downlink, get_device_session_keys
 
-#the fctrl_dict is a dictionary with the keys ADR, ADRACKReq, ACK, ClassB
-#TODO:need to add a fucntin that genrates the fctrl dict based on the mac cmds to be sent
+#the fctrl_dict is a dictionary with the keys ADR, RFU, ACK, FPending
 def fhdr_builder(dev_addr, fctrl_dict, fcnt, fopts_bytes):
-    # Define the FCtrl structure
-    FCtrl = BitStruct(
-        "ADR" / BitsInteger(1),         # Adaptive Data Rate enabled
-        "ADRACKReq" / BitsInteger(1),   # ADR acknowledgment request
-        "ACK" / BitsInteger(1),         # Acknowledgment of confirmed frames
-        "ClassB" / BitsInteger(1),      # Class B support indication
-        "FOptsLen" / BitsInteger(4)     # Length of optional MAC commands in FOpts (0–15 bytes)
+    # Define the FCtrl structure (Downlink: ADR | RFU | ACK | FPending | FOptsLen)
+    FCtrlDown = BitStruct(
+        "ADR" / BitsInteger(1),        # Adaptive Data Rate enabled
+        "RFU" / BitsInteger(1),        # Reserved for future use (must be 0)
+        "ACK" / BitsInteger(1),        # Acknowledgment of confirmed uplink
+        "FPending" / BitsInteger(1),   # Indicates more frames pending
+        "FOptsLen" / BitsInteger(4)    # Length of MAC commands in FOpts (0–15 bytes)
     )
 
+    if len(fopts_bytes) > 15:
+        raise ValueError("FOpts exceeds 15 bytes; move MAC commands to FRMPayload with FPort=0.")
+
+    # Normalize DevAddr to int (accepts int, bytes, or hex string)
+    if isinstance(dev_addr, (bytes, bytearray)):
+        if len(dev_addr) != 4:
+            raise ValueError("DevAddr bytes must be 4 bytes (little-endian).")
+        dev_addr_int = int.from_bytes(dev_addr, "little")
+    elif isinstance(dev_addr, int):
+        dev_addr_int = dev_addr
+    else:
+        dev_addr_int = int(str(dev_addr), 16)
+
     # Build the FCtrl field
-    fctrl = FCtrl.build({
+    fctrl = FCtrlDown.build({
         "ADR": fctrl_dict.get("ADR", 0),
-        "ADRACKReq": fctrl_dict.get("ADRACKReq", 0),
+        "RFU": fctrl_dict.get("RFU", 0),      # keep 0
         "ACK": fctrl_dict.get("ACK", 0),
-        "ClassB": fctrl_dict.get("ClassB", 0),
+        "FPending": fctrl_dict.get("FPending", 0),
         "FOptsLen": len(fopts_bytes)
     })
 
-    # Define the FHDR structure
-    FHDR = Struct(
-        "DevAddr" / Int32ul,  # Device address (little endian)
-        "FCtrl" / FCtrl,                # Frame control flags and FOpts length
-        "FCnt" / Int16ul,               # Frame counter (2 bytes, uplink/downlink tracking)
-        "FOpts" / Bytes(len(fopts_bytes))  # Optional MAC commands (0–15 bytes) Variable length
+    # DevAddr (Int32 LE), FCtrl (1B), FCnt (2B LE), FOpts (0–15B)
+    fhdr = (
+        dev_addr_int.to_bytes(4, "little") +     # DevAddr (little endian)
+        fctrl +                                  # FCtrl
+        (fcnt & 0xFFFF).to_bytes(2, "little") +  # Frame counter (2 bytes)
+        fopts_bytes                              # Optional MAC commands
     )
+    return fhdr, dev_addr_int  # return both FHDR and normalized DevAddr
 
-    # Build the FHDR
-    fhdr = FHDR.build({
-        "DevAddr": dev_addr,
-        "FCtrl": {
-            "ADR": fctrl_dict.get("ADR", 0),
-            "ADRACKReq": fctrl_dict.get("ADRACKReq", 0),
-            "ACK": fctrl_dict.get("ACK", 0),
-            "ClassB": fctrl_dict.get("ClassB", 0),
-            "FOptsLen": len(fopts_bytes)
-        },
-        "FCnt": fcnt,
-        "FOpts": fopts_bytes
-    })
-
-    return fhdr
-
-def mac_payload_builder(dev_addr,fctrl_dict,fcnt,fopts_bytes,fport,frmpayload):
+def mac_payload_builder(dev_addr_int, fctrl_dict, fcnt, fopts_bytes, fport, frmpayload):
     # Build FHDR
-    fhdr=fhdr_builder(dev_addr, fctrl_dict, fcnt, fopts_bytes)
-    # Define the MACPayload structure
-    LoRaWANMACPayload = Struct(
-        "FHDR" / fhdr,
-        "FPort" / Byte,
-        "FRMPayload" / GreedyBytes
-    )
-    
-    # Build the MACPayload
-    mac_payload = LoRaWANMACPayload.build({
-        "FHDR": fhdr,
-        "FPort": fport,
-        "FRMPayload": frmpayload
-    })
+    fhdr, _ = fhdr_builder(dev_addr_int, fctrl_dict, fcnt, fopts_bytes)
+    # Only include FPort if FRMPayload is present
+    if frmpayload and fport is not None:
+        return fhdr + bytes([fport]) + frmpayload
+    return fhdr  # no FRMPayload => omit FPort
 
-    return mac_payload 
-
-#TODO: need to know how do i get the values for rfu and major
+#the major and rfu are always 0 for LoRaWAN 1.0.x
 def mhdr_builder(mtype, rfu=0, major=0):
-    # Define the MHDR structure
     MHDR = BitStruct(
-        "MType" / BitsInteger(3),
-        "RFU" / BitsInteger(3),
-        "Major" / BitsInteger(2)
+        "MType" / BitsInteger(3),  # Message type
+        "RFU" / BitsInteger(3),    # Reserved, must be 0
+        "Major" / BitsInteger(2)   # LoRaWAN major version (0 for R1 = 1.0.x/1.1)
     )
+    return MHDR.build({"MType": mtype, "RFU": rfu, "Major": major})
 
-    # Build the MHDR
-    mhdr = MHDR.build({
-        "MType": mtype,
-        "RFU": rfu,
-        "Major": major
-    })
-
-    return mhdr
-
-#TODO:need to make a fucnitn that makes the mac_cmd_downlink based on the mac cmds to be sent:either schedualed or responses
-
-def downlink_pkt_build(mtype,mac_cmd_downlink,dev_eui,dev_addr):
-    
+#It should be in the appropriate format (list of bytes)
+def downlink_pkt_build(mtype, mac_cmd_downlink, dev_eui, dev_addr, application_data: bytes = b"", application_fport: int = 1):
     # Retrieve session keys 
-    nwk_skey, app_skey = get_device_session_keys(dev_eui)
-    
+    nwk_skey_hex, app_skey_hex = get_device_session_keys(dev_eui)
+    nwk_skey = bytes.fromhex(nwk_skey_hex)
+    app_skey = bytes.fromhex(app_skey_hex)
+
     # Get and increment the downlink frame counter
-    #TODO: need to create the get_and_increment_fcnt_downlink function
     fcnt_down = get_and_increment_fcnt_downlink(dev_eui)
 
-    # Build FOpts from MAC command responses
-    fopts_bytes = b''.join(mac_cmd_downlink) if mac_cmd_downlink else b''
+    # Build FOpts from MAC command responses (≤ 15B). If larger, must move to FRMPayload@FPort=0
+    mac_bytes = b"".join(mac_cmd_downlink) if mac_cmd_downlink else b""
+    has_app_data = bool(application_data)
 
-    # TODO: CALL THE FCtrl dictionary FUCNTION HERE TO GET THE VALUES BASED ON THE MAC CMDS
+    if len(mac_bytes) <= 15:
+        fopts_bytes = mac_bytes
+        mac_cmds_in_frm = b""
+        chosen_fport = None
+    else:
+        # Too large for FOpts. If app data also present → conflict
+        if has_app_data:
+            raise ValueError("MAC commands >15B cannot share FRMPayload with application data. Send in a separate downlink.")
+        fopts_bytes = b""
+        mac_cmds_in_frm = mac_bytes
+        chosen_fport = 0  # FRMPayload will carry MAC commands (encrypted with NwkSKey)
+
+    # TODO:Build the FCtrl dictionary (ACK/ADR/FPending) from MAC command logic
     fctrl_dict = create_fctrl_dict_based_on_mac_cmds(mac_cmd_downlink)
-    # Example FRMPayload (empty for MAC commands only)
-    frmpayload = b''
+    fctrl_dict.setdefault("RFU", 0)
+
+    # Normalize DevAddr once and reuse
+    if isinstance(dev_addr, (bytes, bytearray)):
+        dev_addr_int = int.from_bytes(dev_addr, "little")
+    elif isinstance(dev_addr, int):
+        dev_addr_int = dev_addr
+    else:
+        dev_addr_int = int(str(dev_addr), 16)
 
     # Build MACPayload
-    mac_payload = mac_payload_builder(dev_addr, fctrl_dict, fcnt_down, fopts_bytes, fport=0 if frmpayload == b'' else 1, frmpayload=frmpayload)
+    if mac_cmds_in_frm:  # case: MAC commands >15B, no app data
+        enc_frm = encrypt_frm_payload(app_skey, nwk_skey, dev_addr_int, fcnt_down, 1, mac_cmds_in_frm, Fport=0)
+        mac_payload = mac_payload_builder(dev_addr_int, fctrl_dict, fcnt_down, fopts_bytes, fport=0, frmpayload=enc_frm)
+    elif has_app_data:  # case: application data present
+        if application_fport == 0:
+            raise ValueError("application_fport=0 is reserved for MAC commands.")
+        enc_app = encrypt_frm_payload(app_skey, nwk_skey, dev_addr_int, fcnt_down, 1, application_data, Fport=application_fport)
+        mac_payload = mac_payload_builder(dev_addr_int, fctrl_dict, fcnt_down, fopts_bytes, fport=application_fport, frmpayload=enc_app)
+    else:  # case: only FOpts or empty downlink
+        mac_payload = mac_payload_builder(dev_addr_int, fctrl_dict, fcnt_down, fopts_bytes, fport=None, frmpayload=b"")
 
-    # Build MHDR
-    mhdr = mhdr_builder(mtype)
+    # Build MHDR (LoRaWAN 1.0.x: RFU=0, Major=0). MType=3 for UnconfirmedDataDown, 5 for ConfirmedDataDown
+    mhdr = mhdr_builder(mtype, rfu=0, major=0)
 
-    # Combine MHDR and MACPayload to form the PHY payload
-    phy_payload = mhdr + mac_payload
+    # Calculate MIC over B0 | MHDR | MACPayload (direction=1 for downlink)
+    mic = generate_mic(nwk_skey, dev_addr_int, fcnt_down, 1, mhdr, mac_payload)
 
-    # Calculate MIC
-    mic = generate_mic(nwk_skey, phy_payload, dev_addr, fcnt_down, direction=1)  # direction=1 for downlink
-
-    # Final PHY payload with MIC
-    final_phy_payload = phy_payload + mic
-
-    return final_phy_payload
+    # Final PHYPayload = MHDR | MACPayload | MIC
+    return mhdr + mac_payload + mic

@@ -73,7 +73,7 @@ def fcnt_to_little_endian_bytes(fcnt: int, Bytes: int) -> bytes:
 #First we encrypt the A block (which is the J block) using ECB mode (each block on its own )
 #Then the result is XORed with the FRMPayload (Padded if needed) to get the decrypted payload
 #Decrypted[i] = FRMPayload[i] XOR S_block[i]
-def decrypt_frm_payload(app_skey: bytes,nwkskey:bytes, dev_addr: bytes, fcnt: int, direction: int, frm_payload: bytes, Fport: int) -> bytes:
+def decrypt_frm_payload(app_skey: bytes, nwkskey: bytes, dev_addr: bytes, fcnt: int, direction: int, frm_payload: bytes, Fport: int) -> bytes:
     """
     Decrypts the FRMPayload using AES-CTR mode as per LoRaWAN specification (section 4.3.3),
     with vectorized XOR via NumPy for better performance.
@@ -88,15 +88,25 @@ def decrypt_frm_payload(app_skey: bytes,nwkskey:bytes, dev_addr: bytes, fcnt: in
     Returns:
         bytes: Decrypted payload.
     """
-    if (len(app_skey) and len(nwkskey))!= 16:
+    if len(app_skey) != 16 or len(nwkskey) != 16:
         raise ValueError("Both AppSKey and NwkSKey must be 16 bytes")
-     # Select the correct key based on FPort
+    # Select the correct key based on FPort
     if Fport == 0:
         key = nwkskey
     else:
         key = app_skey
 
-    aes_cipher = AES.new(key, AES.MODE_ECB)
+    # Accept int or 4-byte DevAddr
+    if isinstance(dev_addr, int):
+        devaddr_bytes = dev_addr.to_bytes(4, 'little')
+    else:
+        if len(dev_addr) != 4:
+            raise ValueError("dev_addr must be 4 bytes (little-endian) or an int")
+        devaddr_bytes = dev_addr
+
+    cipher = Cipher(algorithms.AES(key), modes.ECB())
+    encryptor = cipher.encryptor()
+
     payload_len = len(frm_payload)
     num_blocks = (payload_len + 15) // 16
     decrypted = bytearray()
@@ -106,12 +116,12 @@ def decrypt_frm_payload(app_skey: bytes,nwkskey:bytes, dev_addr: bytes, fcnt: in
         a_block = bytearray(16)
         a_block[0] = 0x01
         a_block[5] = direction & 0x01
-        a_block[6:10] = dev_addr.to_bytes(4, 'little')
-        a_block[10:12] = fcnt.to_bytes(2, 'little')
+        a_block[6:10] = devaddr_bytes
+        a_block[10:14] = fcnt.to_bytes(2, 'little') + b'\x00\x00'
         a_block[15] = (i + 1) & 0xFF  # Counter starts at 1
 
         # --- Encrypt A block to get S block ---
-        s_block = aes_cipher.encrypt(bytes(a_block))
+        s_block = encryptor.update(bytes(a_block))
 
         # --- Slice current 16-byte chunk from payload ---
         start = i * 16
