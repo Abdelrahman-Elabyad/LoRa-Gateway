@@ -59,33 +59,73 @@ def initialize_device_yaml(dev_eui, app_eui, dev_nonce, output_dir="device_confi
 
 def update_device_yaml_with_join_parameters(dev_eui, params, output_dir="device_config"):
     """
-    Updates the device YAML file with join-accept parameters:
-    AppNonce, DevAddr, NetID, DLSettings, RxDelay, CFList.
+    Updates the device YAML file with join-accept parameters **in formats your readers expect**:
+      - AppNonce: decimal int (not hex string)
+      - NetID:    decimal int (not hex string)
+      - DevAddr:  uppercase hex (LSB/on-air order)
+      - DLSettings: int
+      - RxDelay:    int
+      - CFList:     list of 16 bytes as uppercase hex strings (unchanged)
     """
-    yaml_path = os.path.join(output_dir, f"device_{dev_eui}.yaml")
+    import os, yaml
+    from datetime import datetime
 
+    yaml_path = os.path.join(output_dir, f"device_{dev_eui}.yaml")
     if not os.path.exists(yaml_path):
         raise FileNotFoundError(f"❌ Device YAML for {dev_eui} not found at {yaml_path}")
 
-    with open(yaml_path, "r") as f:
+    with open(yaml_path, "r", encoding="utf-8") as f:
         device_data = yaml.safe_load(f) or {}
 
-    # Update fields from params
+    # ---- Normalize incoming fields ----
+    # AppNonce can come as int (your generator) or bytes; store as DECIMAL INT
+    app_nonce_val = params["AppNonce"]
+    if isinstance(app_nonce_val, bytes):
+        app_nonce_int = int.from_bytes(app_nonce_val, "little")
+    else:
+        app_nonce_int = int(app_nonce_val)  # already an int
+
+    # NetID is currently produced as 3 bytes LE in your generator; store as DECIMAL INT
+    netid_val = params["NetID"]
+    if isinstance(netid_val, (bytes, bytearray)):
+        netid_int = int.from_bytes(netid_val, "little")
+    else:
+        # If someone passes a hex string by mistake, accept it; otherwise cast to int
+        netid_int = int(netid_val, 16) if isinstance(netid_val, str) and all(c in "0123456789abcdefABCDEF" for c in netid_val) else int(netid_val)
+
+    # DevAddr must be stored as uppercase hex (LSB/on-air order)
+    devaddr_val = params["DevAddr"]
+    if isinstance(devaddr_val, (bytes, bytearray)):
+        devaddr_hex = devaddr_val.hex().upper()
+    elif isinstance(devaddr_val, int):
+        devaddr_hex = devaddr_val.to_bytes(4, "little").hex().upper()
+    else:
+        # if already hex string
+        devaddr_hex = str(devaddr_val).upper()
+
+    # CFList is a 16-byte blob; keep your existing representation as list of hex bytes
+    cflist_bytes = params["CFList"]
+    if isinstance(cflist_bytes, (bytes, bytearray)):
+        cflist_list = [f"{b:02X}" for b in cflist_bytes]
+    else:
+        # if already a sequence of ints/bytes
+        cflist_list = [f"{int(b)&0xFF:02X}" for b in cflist_bytes]
+
+    # ---- Write back in the canonical formats your other functions expect ----
     device_data.update({
-        "AppNonce": params["AppNonce"].hex().upper() if isinstance(params["AppNonce"], bytes) else str(params["AppNonce"]),
-        "DevAddr": params["DevAddr"].hex().upper(),
-        "NetID": params["NetID"].hex().upper(),
-        "DLSettings": params["DLSettings"],
-        "RxDelay": params["RxDelay"],
-        "CFList": [f"{b:02X}" for b in params["CFList"]],
-        "LastUpdated": datetime.utcnow().isoformat() + "Z"
+        "AppNonce": app_nonce_int,          # DECIMAL INT
+        "DevAddr": devaddr_hex,             # HEX STRING (LSB/on-air)
+        "NetID": netid_int,                 # DECIMAL INT
+        "DLSettings": int(params["DLSettings"]),
+        "RxDelay": int(params["RxDelay"]),
+        "CFList": cflist_list,              # list of 16 hex bytes as strings
+        "LastUpdated": datetime.utcnow().isoformat() + "Z",
     })
 
-    with open(yaml_path, "w") as f:
+    with open(yaml_path, "w", encoding="utf-8") as f:
         yaml.dump(device_data, f, sort_keys=False)
 
     print(f"✅ Device YAML updated with join parameters: {yaml_path}")
-
 
 def update_device_yaml_with_session_keys(dev_eui, nwk_skey, app_skey, output_dir="device_config"):
     """

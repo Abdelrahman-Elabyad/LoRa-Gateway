@@ -1,6 +1,10 @@
 # this file is supposed to be the database of device that teh server recongnizes
+# DevEUI must be stored in **LSB (little-endian) hex format**,
+# i.e., as it appears in the JoinRequest on-air.
+# Example: IEEE EUI = 70-B3-D5-7E-D0-06-9B-6C (MSB order)
+# Stored here as → "6C9B06D07ED5B370" (LSB order).
 devices_eui:
-  0807060504030201:
+  '0807060504030201':
     AppKey: 00112233445566778899AABBCCDDEEFF
     NwkAddr: 214247
     NwkID: 18
@@ -10,4 +14,17 @@ devices_eui:
     NwkAddr: 123456
     NwkID: 33
     label: Vehicle Tracker
+  '6C9B06D07ED5B370':
+    # AppKey must be stored in **MSB order** (normal spec orientation).
+    # Always a 32-character uppercase hex string.
+    AppKey: "A089CA229CD6C6ED45B7BAA5C41C91B0"
+    # NwkAddr must be an integer (decimal).
+    # This is the 25-bit network address part of the DevAddr.
+    NwkAddr: 654321
+    # NwkID must be an integer (decimal).
+    # This is the 7-bit network identifier part of the DevAddr.
+    NwkID: 45
+    # Optional human-readable label for reference only (not used by code).
+    label: "End Device GUC"
+
 
