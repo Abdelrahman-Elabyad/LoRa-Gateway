@@ -2,7 +2,7 @@ import struct
 from construct import BitStruct, BitsInteger
 from features.security import generate_mic, encrypt_frm_payload
 from uplink_packet_handling.processing.device_registry import get_and_increment_fcnt_downlink, get_device_session_keys
-
+#Just to be able to add teh commit meassage for the downilink packet generation part 
 #the fctrl_dict is a dictionary with the keys ADR, RFU, ACK, FPending
 def fhdr_builder(dev_addr, fctrl_dict, fcnt, fopts_bytes):
     # Define the FCtrl structure (Downlink: ADR | RFU | ACK | FPending | FOptsLen)
